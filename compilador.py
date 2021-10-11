@@ -1,5 +1,3 @@
-import lex
-
 tokens = (
     "ID",
     "NUMBER",
@@ -7,7 +5,6 @@ tokens = (
     "COMMA",
     "PROGRAM",
     "VARS",
-    "VAR",
     "MODULE",
     "INT",
     "FLOAT",
@@ -23,7 +20,7 @@ tokens = (
     "PLUS",
     "MINUS",
     "MULTIPLIES",
-    "DIVIDES",
+    "DIVIDE",
     "LESS_THAN",
     "MORE_THAN",
     "IF",
@@ -50,8 +47,6 @@ t_COMMA = r","
 t_PROGRAM = r"program"
 
 t_VARS = r"vars"
-
-t_VAR = r"var"
 
 t_MODULE = r"module"
 
@@ -83,7 +78,7 @@ t_MINUS = r"-"
 
 t_MULTIPLIES = r"\*"
 
-t_DIVIDES = r"/"
+t_DIVIDE = r"/"
 
 t_LESS_THAN = r"<"
 
@@ -116,7 +111,25 @@ t_ignore = ' \t'
 def t_error(t):
     raise TypeError("Unknown text '%s'" % (t.value,))
 
+# Build the lexer
+import lex
 lex.lex()
+
+# Parsing rules
+
+precedence = (
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'MULTIPLIES', 'DIVIDE')
+)
+
+# dictionary of names
+names = {}
+
+def p_program(t):
+    'program : PROGRAM ID SEMICOLON VARS block'
+    print(t[1])
+
+######################################################## TODO: GRAMMAR ##############################################################
 
 lex.input("while else if")
 for tok in iter(lex.token, None):
