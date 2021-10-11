@@ -5,7 +5,7 @@ tokens = (
     "NUMBER",
     "SEMICOLON",
     "COMMA",
-    "PROGRAMA",
+    "PROGRAM",
     "VARS",
     "VAR",
     "MODULE",
@@ -39,7 +39,7 @@ tokens = (
     "RETURN"
 )
 
-t_ID = r'[a-zA-Z_][a-zA-Z0-9_]*'
+"""t_ID = r'[a-zA-Z_][a-zA-Z0-9_]*'"""
 
 t_NUMBER = r'[0-9]+'
 
@@ -63,25 +63,25 @@ t_BOOLEAN = r"bool"
 
 t_VOID = r"void"
 
-t_OPEN_PAREN = r"("
+t_OPEN_PAREN = r"\("
 
-t_CLOSE_PAREN = r"("
+t_CLOSE_PAREN = r"\("
 
-t_OPEN_BRACKETS = r"["
+t_OPEN_BRACKETS = r"\["
 
-t_OPEN_BRACKETS = r"]"
+t_CLOSE_BRACKETS = r"\]"
 
-t_OPEN_BRACES = r"{"
+t_OPEN_BRACES = r"\{"
 
-t_CLOSE_BRACES = r"}"
+t_CLOSE_BRACES = r"\}"
 
 t_EQUALS = r"="
 
-t_PLUS = r"+"
+t_PLUS = r"\+"
 
 t_MINUS = r"-"
 
-t_MULTIPLIES = r"*"
+t_MULTIPLIES = r"\*"
 
 t_DIVIDES = r"/"
 
