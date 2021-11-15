@@ -5,43 +5,10 @@ vars
     float valor;
     int Matriz[3][8];
 
-int module fact (int j)
-vars int i;
-{
-    i = j + (p - j*2+j);
-    if (j==1) then
-        {return (j);}
-    else
-        {return (j*fact(j-i));}
-}
-
-void module inicia (int y)
-var int x;
-{
-    x=1;
-    while(x < 11) do
-    {
-        Arreglo[x]=y*x;
-        x=x+1;
-    }
-}
-
 main ()
 {
-    read(p); j=p*2;
+    read(p);
+    j=p*2;
     inicia(p*j - 5);
-    for i=1 to 10 do
-    {
-        Arreglo[i]=Arreglo[i]*fact(Arreglo[i]-p);
-    }
-    for j=1 to 3 do
-        for k=1 to 8 do
-        {
-            Matriz[j,k]=Arreglo[j+k-fact(p)+p*k]*p+j;
-        }
-    while(i >= 0) do
-        {
-            write("resultado", Arreglo[i], fact(i+2)*valor);
-            i=i - 1;
-        }
+    
 }

@@ -111,12 +111,14 @@ def p_func_call(p):
 def p_func_call_comp(p):
     '''func_call_comp : ID func_call_comp
     | COMMA ID func_call_comp
-    | empty
+    | expressions
     '''
 
 # function for expressions
 def p_expressions(p):
-    'expressions : exp expressions_op exp'
+    '''expressions : exp expressions_op exp
+    | exp
+    '''
 
 # function for expression operators
 def p_expressions_op(p): 
@@ -155,6 +157,11 @@ def p_factor(p):
     '''factor : OPEN_PAREN expressions CLOSE_PAREN
     | factor_comp ID
     | factor_comp func_call
+    | ID
+    | func_call
+    | CT_INT
+    | CT_FLOAT
+    | CT_CHAR
     '''
 
 # function for factor_complimentary
