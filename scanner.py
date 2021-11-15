@@ -36,6 +36,7 @@ tokens = (
     "INT",
     "FLOAT",
     "BOOLEAN",
+    "CHAR",
     "VOID",
     "OPEN_PAREN",
     "CLOSE_PAREN",
@@ -45,6 +46,7 @@ tokens = (
     "CLOSE_BRACES",
     "ASSIGN",
     "EQUALS",
+    "NOT_EQUALS",
     "PLUS",
     "MINUS",
     "MULTIPLIES",
@@ -88,6 +90,7 @@ t_LESS_THAN = r"<"
 t_MORE_THAN = r">"
 t_AND = r"&&"
 t_OR = r"\|\|"
+t_NOT_EQUALS = r"!="
 
 #Definiciones de TOKENS
 
@@ -116,6 +119,11 @@ def t_CT_STRING(t):
     t.value = t.value[1:-1]
     return t
 
+def t_CT_CHAR(t):
+    r'\'.\''
+    t.value = t.value[1:-1]
+    return t
+
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
@@ -139,7 +147,7 @@ def t_error(t):
 # vars int i;
 # {
 #     i = j + (p - j*2.1+j);
-#     if (j==1 && j ==2) then
+#     if (j==1 && j !=2) then
 #         {return (j);}
 #     else
 #         {return (j*fact(j-i));}
@@ -182,6 +190,6 @@ lex.lex()
 
 #Test para scanner
 
-#lex.input(data)
+# lex.input(data)
 # for tok in iter(lex.token, None):
 #     print(repr(tok.type), repr(tok.value))
