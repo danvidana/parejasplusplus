@@ -1,14 +1,22 @@
 program foreveralone;
 vars
-    int i, j, p;
-    int Arreglo[10];
-    float valor;
-    int Matriz[3][8];
+    int i,j;
+    float k,h;
+    char z[10], r[3];
+
+
+int module fact (int j, int x)
+{
+}
+
+int module inicia (int j, int y)
+{
+}
 
 main ()
 {
     read(p);
     j=p*2;
-    inicia(p*j - 5);
+    inicia(p*j - 5, 8);
     
 }
