@@ -4,19 +4,22 @@ from scanner import tokens
 
 # function for program
 def p_program(p):
-    '''program : PROGRAM ID SEMICOLON main
-    | PROGRAM ID SEMICOLON vars main
-    | PROGRAM ID SEMICOLON funcs main
-    | PROGRAM ID SEMICOLON vars funcs main
-    '''
-
+    'program : PROGRAM ID SEMICOLON vars funcs main'
+    
+    
 # funciton for main
 def p_main(p):
     'main : MAIN OPEN_PAREN CLOSE_PAREN block'
 
 # function for funcs
 def p_funcs(p):
-    'funcs : func_type MODULE ID OPEN_PAREN var_type ID CLOSE_PAREN vars block'
+    '''funcs : func_type MODULE ID OPEN_PAREN var_type ID CLOSE_PAREN vars block
+    | empty
+    '''
+
+def p_funcs_comp(p):
+    '''funcs_comp : ID OPEN_PAREN var_type ID CLOSE_PAREN vars block
+    '''
 
 # function for block
 def p_block(p):
@@ -37,13 +40,37 @@ def p_var_type(p):
 
 # function for vars
 def p_vars(p):
-    'vars : VARS var_comp'
+    '''vars : VARS var_comp
+    | empty
+    '''
     
 # function for var_comp, comp refers to complement
 def p_var_comp(p):
-    '''var_comp : var_type ids var_comp SEMICOLON var_comp
-    | COMMA ids var_comp
+    '''var_comp : var_type ids var_comp_2 var_comp_final
+    | var_type ids var_comp_2 SEMICOLON var_comp_recursive
+    '''
+    
+def p_var_comp_2(p):
+    '''var_comp_2 : COMMA ids var_comp_3
     | empty
+    '''
+
+def p_var_comp_3(p):
+    'var_comp_3 : var_comp_2'
+
+def p_var_comp_recursive(p):
+    '''var_comp_recursive : var_type ids var_comp_2 var_comp_final
+    | var_type ids var_comp_2 SEMICOLON var_comp_recursive
+    '''
+
+def p_var_comp_final(p):
+    '''var_comp_final : SEMICOLON
+    | var_module_trans
+    '''
+
+# Function for transition to functions in case module is found
+def p_var_module_trans(p):
+    '''var_module_trans : SEMICOLON var_type MODULE funcs_comp
     '''
 
 # function for ids

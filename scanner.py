@@ -27,12 +27,12 @@ reserved = {
 #Tokens
 
 tokens = (
-    "ID",
     "SEMICOLON",
     "COMMA",
     "PROGRAM",
     "VARS",
     "MODULE",
+    "ID",
     "INT",
     "FLOAT",
     "BOOLEAN",
