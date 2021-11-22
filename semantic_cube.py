@@ -47,6 +47,21 @@ semantic_cube['int']['<=']['float'] = 'bool'
 #semantic_cube['int']['&&']['float'] = 'bool'
 #semantic_cube['int']['||']['float'] = 'bool'
 
+#FLOAT
+semantic_cube['float']['+']['float'] = 'float'
+semantic_cube['float']['-']['float'] = 'float'
+semantic_cube['float']['*']['float'] = 'float'
+semantic_cube['float']['/']['float'] = 'float'
+semantic_cube['float']['=']['float'] = 'float'
+semantic_cube['float']['==']['float'] = 'bool'
+semantic_cube['float']['!=']['float'] = 'bool'
+semantic_cube['float']['>']['float'] = 'bool'
+semantic_cube['float']['>=']['float'] = 'bool'
+semantic_cube['float']['<']['float'] = 'bool'
+semantic_cube['float']['<=']['float'] = 'bool'
+#semantic_cube['float']['&&']['float'] = 'bool'
+#semantic_cube['float']['||']['float'] = 'bool'
+
 #FLOAT - INT
 semantic_cube['float']['+']['int'] = 'float'
 semantic_cube['float']['-']['int'] = 'float'
