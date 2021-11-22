@@ -35,7 +35,6 @@ tokens = (
     "ID",
     "INT",
     "FLOAT",
-    "BOOLEAN",
     "CHAR",
     "VOID",
     "OPEN_PAREN",
@@ -52,7 +51,9 @@ tokens = (
     "MULTIPLIES",
     "DIVIDE",
     "LESS_THAN",
+    "LESS_THAN_EQUAL",
     "MORE_THAN",
+    "MORE_THAN_EQUAL",
     "IF",
     "THEN",
     "ELSE",
@@ -87,7 +88,9 @@ t_MINUS = r"-"
 t_MULTIPLIES = r"\*"
 t_DIVIDE = r"/"
 t_LESS_THAN = r"<"
+t_LESS_THAN_EQUAL = r"<="
 t_MORE_THAN = r">"
+t_MORE_THAN_EQUAL = r">="
 t_AND = r"&&"
 t_OR = r"\|\|"
 t_NOT_EQUALS = r"!="
