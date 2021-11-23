@@ -1,7 +1,10 @@
 # Cubo Semantico
 # El cubo semantico es un dictionary de python
 
-semantic_cube = {}
+from collections import defaultdict
+
+#Retornos no acepatados regruesan None
+semantic_cube = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
 
 # +
 # -
