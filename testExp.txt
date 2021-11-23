@@ -1,0 +1,6 @@
+program patito;
+vars
+    int a, b;
+main(){
+    a = b + 1;
+}

@@ -1,8 +1,1 @@
 program foreveralone;
-vars
-    int i, j;
-
-main ()
-{
-
-}
