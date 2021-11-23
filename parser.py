@@ -1,6 +1,30 @@
 import sys
 import ply.yacc as yacc
 from scanner import tokens
+from semantic_cube import semantic_cube
+
+# Stack Implementation
+class Stack:
+     def __init__(self):
+         self.items = []
+
+     def is_empty(self):
+         return self.items == []
+
+     def push(self, item):
+         self.items.append(item)
+
+     def pop(self):
+         return self.items.pop()
+
+     def peek(self):
+         return self.items[len(self.items)-1]
+
+     def size(self):
+         return len(self.items)
+         
+     def elements(self):
+        return self.items
 
 # Global variables (directories, tables)
 
@@ -10,16 +34,32 @@ currentId = ''
 currentType = ''
 currentFunc = ''
 
+### Stacks for quadruples
+# For expresions
+operatorStack = Stack()
+typeStack = Stack()
+elementStack = Stack()
+
 funcName = 'global'
+
+
+quadruples = []
+
 
 # function for program
 def p_program(p):
-    'program : PROGRAM ID SEMICOLON vars funcs main'
+   '''program : PROGRAM ID add_program SEMICOLON vars funcs main end_program'''
+    
+def p_add_program(p):
+    'add_program : '
     # Create dirFunc
     global dirFunc
-    dirFunc["program"]["name"] = p[2]
-    dirFunc["program"]["type"] = 'void'
-    
+    dirFunc[funcName] = {'type': 'void', 'var_table': {}}
+    #print(dirFunc)
+
+def p_end_program(p):
+    '''end_program :'''
+    print(dirFunc)
     
 # funciton for main
 def p_main(p):
@@ -27,23 +67,33 @@ def p_main(p):
 
 # function for funcs
 def p_funcs(p):
-    '''funcs : func_type MODULE ID OPEN_PAREN funcs_params CLOSE_PAREN vars block
+    '''funcs : func_type MODULE ID add_module OPEN_PAREN funcs_params CLOSE_PAREN vars block
     | empty
     '''
 
+def p_add_module(p):
+    '''add_module :'''
+    global funcName
+    idName = p[-1]
+    funcName = idName
+    if funcName not in dirFunc.keys():
+        dirFunc[funcName] = {'type': currentType, 'var_table': {}}
+    else:
+        print('Error: Module ' + funcName + ' already defined')
+
 # function for funcs_complementary
 def p_funcs_comp(p):
-    'funcs_comp : ID OPEN_PAREN funcs_params CLOSE_PAREN vars block'
+    'funcs_comp : ID add_module OPEN_PAREN funcs_params CLOSE_PAREN vars block'
 
 # function for funcs_params
 def p_funcs_params(p):
-    '''funcs_params : var_type variable funcs_params_comp
+    '''funcs_params : var_type variable_params funcs_params_comp
     | empty
     '''
 
 # function for funcs_params_complementary
 def p_funcs_params_comp(p):
-    '''funcs_params_comp : COMMA var_type ID funcs_params_comp
+    '''funcs_params_comp : COMMA var_type variable_params funcs_params_comp
     | empty
     '''
 
@@ -57,6 +107,9 @@ def p_func_type(p):
     '''func_type : var_type
     | VOID
     '''
+    global currentType
+    if p[1] == 'void':
+        currentType = p[1]
 
 # function for var_types
 def p_var_type(p):
@@ -64,25 +117,28 @@ def p_var_type(p):
     | FLOAT
     | CHAR
     '''
+    global currentType
+    currentType = p[1]
+    #print("currentType in p_var-type: " + currentType)
 
 # function for vars
 def p_vars(p):
-    '''vars : VARS create_var_table var_comp
+    '''vars : VARS var_comp
     | empty
     '''
 
-def p_create_var_table(p):
-    '''create_var_table : '''
-    dirFunc[funcName] = {'vars':None}
-    if(dirFunc[funcName]['vars'] == None):
-        print("Sin tabla")
-    
-    
 # function for var_comp, comp refers to complement
 def p_var_comp(p):
     '''var_comp : var_type ids_dec var_comp_2 var_comp_final
     | var_type ids_dec var_comp_2 SEMICOLON var_comp_recursive
     '''
+
+def p_create_var_table(p):
+    '''create_var_table : empty'''
+    if(funcName == 'global'):
+        print("hola")
+    # if(dirFunc[funcName]['vars'] == None):
+    #     print("Sin tabla") 
     
 def p_var_comp_2(p):
     '''var_comp_2 : COMMA ids_dec var_comp_3
@@ -113,6 +169,11 @@ def p_ids_dec(p):
     | ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS
     | ID
     '''
+    idName = p[1]
+    if idName not in dirFunc[funcName]["var_table"]:
+        dirFunc[funcName]["var_table"][idName] = {'type': currentType}
+    else:
+        print('Error: Variable ' + idName + ' already defined')
 
 # function for ids
 def p_ids(p):
@@ -173,7 +234,7 @@ def p_condition(p):
     '''condition : IF OPEN_PAREN expressions CLOSE_PAREN THEN block ELSE block
     | IF OPEN_PAREN expressions CLOSE_PAREN THEN block
     | WHILE OPEN_PAREN expressions CLOSE_PAREN DO block
-    | FOR ids_dec ASSIGN expressions TO expressions DO block
+    | FOR ids ASSIGN expressions TO expressions DO block
     '''
 
 # function for return
@@ -226,14 +287,14 @@ def p_expressions_op(p):
 
 # function for exp
 def p_exp(p):
-    '''exp : term
+    '''exp : term 
     | term exp_comp
     '''
 
 # function for exp_complementary (Sums and subtractions)
 def p_exp_comp(p):
-    '''exp_comp : PLUS exp
-    | MINUS exp
+    '''exp_comp : PLUS add_op exp
+    | MINUS add_op exp
     '''
 
 # function for term
@@ -244,25 +305,96 @@ def p_term(p):
 
 # function for term_complimentary (Multiplications and divisions)
 def p_term_comp(p):
-    '''term_comp : MULTIPLIES term
-    | DIVIDE term
+    '''term_comp : MULTIPLIES add_op term
+    | DIVIDE add_op term
     '''
+
+def p_add_op(p):
+    'add_op : '
+    operatorStack.push(p[-1])
+    print(p[-1])
+
+# function to create quadruples for expressions
+def generate_quadruple(operators):
+    if operatorStack:
+        if operatorStack.peek() in operators:
+            rightOperand = elementStack.pop()
+            rightType = typeStack.pop()
+            leftOperand = elementStack.pop()
+            letfType = typeStack.pop()
+            operator = operatorStack.pop()
+
+            resultType = semantic_cube[letfType][operator][rightType]
+
 
 # function for factor 
 def p_factor(p):
     '''factor : OPEN_PAREN expressions CLOSE_PAREN
-    | variable
+    | variable 
     | func_call
-    | CT_INT
-    | CT_FLOAT
-    | CT_CHAR
+    | CT_INT add_ct_int
+    | CT_FLOAT add_ct_float
+    | CT_CHAR add_ct_char
+    '''
+
+# 3 Functions to push constants to stacks
+def p_add_ct_int(p):
+    'add_ct_int : '
+    element = p[-1]
+    
+    elementStack.push(p[-1])
+    typeStack.push('int')
+    print(p[1])
+
+def p_add_ct_float(p):
+    'add_ct_float : '
+    element = p[-1]
+    
+    elementStack.push(p[-1])
+    typeStack.push('float')
+    print(p[1])
+
+def p_add_ct_char(p):
+    'add_ct_char : '
+    element = p[-1]
+    
+    elementStack.push(p[-1])
+    typeStack.push('char')
+    print(p[1])
+
+
+# function for variable
+def p_variable_params(p):
+    '''variable_params : ID
+    | ID dim
     '''
 
 # function for variable
 def p_variable(p):
-    '''variable : ID
+    '''variable : ID add_id
     | ID dim
     '''
+
+# function to add id to quads
+def p_add_id(p):
+    'add_id : '
+    currentId = p[-1]
+
+    # Check if variable exists, if exists it adds to stack
+    if currentId in dirFunc[funcName]['var_table']:
+        varName = currentId
+        varType = dirFunc[funcName]['var_table'][currentId]['type']
+        elementStack.push(varName)
+        typeStack.push(varType)
+    elif currentId in dirFunc['global']['var_table']:
+        varName = currentId
+        varType = dirFunc['global']['var_table'][currentId]['type']
+        elementStack.push(varName)
+        typeStack.push(varType)
+    else:
+        print('Error: Variable ' + idName + ' not defined')
+
+    print(currentId)
 
 # function for variable
 def p_dim(p):
@@ -285,5 +417,7 @@ f = open(file, 'r')
 data = f.read()
 f.close()
 yacc.parse(data)
-if yacc.parse(data) == "invalid":
-	print("Sintax error")
+# if result == "valid":
+# 	print("Valid input")
+# else:
+#     print("Inalid input")
