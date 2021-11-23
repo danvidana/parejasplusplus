@@ -134,7 +134,7 @@ def t_newline(t):
 t_ignore = ' \t'
 
 def t_error(t):
-    raise TypeError("Unknown text '%s'" % (t.value,t.lineno))
+    raise TypeError("Unknown text '%s'" % t.value)
 
 #Test para probar scanner
 
