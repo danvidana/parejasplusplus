@@ -1,6 +1,6 @@
 program patito;
 vars
-    int a, b;
+    int a, b, c, d, e, f, h;
 main(){
-    a = b + 1;
+    a = b + c * (d - e / f) * h;
 }
