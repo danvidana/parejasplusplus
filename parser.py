@@ -34,6 +34,8 @@ currentId = ''
 currentType = ''
 currentFunc = ''
 currentIdVar = ''
+paramsCounter = 0
+varsCounter = 0
 
 ### Stacks for quadruples
 # For expresions
@@ -57,7 +59,7 @@ ct_table = {
 
 # function for program
 def p_program(p):
-   '''program : PROGRAM ID add_program SEMICOLON vars funcs main end_program'''
+   '''program : PROGRAM g_main_quad ID add_program SEMICOLON vars funcs main end_program'''
     
 def p_add_program(p):
     'add_program : '
@@ -89,18 +91,44 @@ def p_end_program(p):
     
 # funciton for main
 def p_main(p):
-    'main : MAIN main_start OPEN_PAREN CLOSE_PAREN block'
+    'main : MAIN OPEN_PAREN CLOSE_PAREN fill_main_quad block'
 
-def p_main_start(p):
-    'main_start :'
+def p_g_main_quad(p):
+    'g_main_quad :'
     global funcName
     funcName = 'global'
+    quadruples.append(['goto', None, None, None])
+
+def p_fill_main_quad(p):
+    'fill_main_quad :'
+    fill(0, len(quadruples))
 
 # function for funcs
 def p_funcs(p):
-    '''funcs : func_type MODULE ID add_module OPEN_PAREN funcs_params CLOSE_PAREN vars block
+    '''funcs : func_type MODULE ID add_module OPEN_PAREN funcs_params CLOSE_PAREN add_parameter_amount vars count_local_vars block end_funcs funcs
     | empty
     '''
+
+def p_end_funcs(p):
+    'end_funcs :'
+    global funcName
+    temp_int_amount = dirFunc[funcName]['next_temp_int'] - 50000
+    temp_float_amount = dirFunc[funcName]['next_temp_float'] - 55000
+    temp_char_amount = dirFunc[funcName]['next_temp_char'] - 60000
+    temp_bool_amount = dirFunc[funcName]['next_temp_bool'] - 65000
+    dirFunc[funcName]["temporal_variables"] = temp_int_amount + temp_float_amount + temp_char_amount + temp_bool_amount
+    quadruples.append(['endfunc', None, None, None])
+    funcName = 'global'
+
+def p_count_local_vars(p):
+    'count_local_vars :'
+    global dirFunc, funcName, varsCounter
+    for x in dirFunc[funcName]["var_table"]:
+        varsCounter += 1
+    varsCounter -= dirFunc[funcName]["parameters"]
+    dirFunc[funcName]["variables"] = varsCounter
+    dirFunc[funcName]["quadruple_count"] = len(quadruples)
+    varsCounter = 0
 
 def p_add_module(p):
     '''add_module :'''
@@ -112,6 +140,8 @@ def p_add_module(p):
         dirFunc[funcName] = {
             'type': currentType,
             'var_table': {},
+            'parameter_table': [],
+            'parameters': 0,
             'next_int': 35000,
             'next_float': 40000,
             'next_char': 45000,
@@ -130,14 +160,19 @@ def p_add_module(p):
 
 # function for funcs_complementary
 def p_funcs_comp(p):
-    'funcs_comp : ID add_module OPEN_PAREN funcs_params CLOSE_PAREN vars block'
+    'funcs_comp : ID add_module OPEN_PAREN funcs_params CLOSE_PAREN add_parameter_amount vars count_local_vars block end_funcs funcs'
+
+def p_add_parameter_amount(p):
+    'add_parameter_amount :'
+    global dirFunc, funcName, paramsCounter
+    dirFunc[funcName]["parameters"] = paramsCounter
+    paramsCounter = 0
 
 # function for funcs_params
 def p_funcs_params(p):
     '''funcs_params : var_type variable_params funcs_params_comp
     | empty
     '''
-    
 
 # function for funcs_params_complementary
 def p_funcs_params_comp(p):
@@ -150,10 +185,13 @@ def p_variable_params(p):
     '''variable_params : ID
     | ID dim
     '''
-    global currentId, currentType
+    global currentId, currentType, paramsCounter
+    paramsCounter += 1
     currentId = p[1]
     funcAddress = set_address(funcName, currentType)
     dirFunc[funcName]['var_table'][currentId] = {'type': currentType, 'address': funcAddress}
+    parameterType = dirFunc[funcName]["var_table"][currentId]["type"]
+    dirFunc[funcName]["parameter_table"].append({'name': currentId, 'type': parameterType})
     
 # function for block
 def p_block(p):
@@ -265,7 +303,7 @@ def p_assignment(p):
         else:
             print("Error: Assignment type mismatch")
     else:
-        print("Error: Id not defined in current scope")
+        print("Error: " + currentId + " not defined in current scope")
 
 # function for reads
 def p_read(p):
@@ -460,15 +498,52 @@ def p_return(p):
 
 # funciton for func_call
 def p_func_call(p):
-    '''func_call : ID OPEN_PAREN func_call_comp CLOSE_PAREN
+    '''func_call : ID verify_function_exists OPEN_PAREN era_activation func_call_comp CLOSE_PAREN change_to_global
     '''
+
+def p_change_to_global(p):
+    'change_to_global :'
+    global funcName
+    funcName = 'global'
+
+def p_verify_function_exists(p):
+    'verify_function_exists :'
+    global currentId, funcName
+    funcName = p[-1]
+    nameId = p[-1]
+    currentId = nameId
+    print(p[-1])
+    if nameId not in dirFunc:
+        print("Error: Wrong Function Call: " + nameId + " function does not exist")
+
+def p_era_activation(p):
+    'era_activation :'
+    global currentId
+    quadruples.append(['ERA', None, None, currentId])
+    counter = 0
 
 # function for func_call_complementary
 def p_func_call_comp(p):
-    '''func_call_comp : expressions func_call_comp
-    | COMMA expressions func_call_comp
+    '''func_call_comp : expressions g_parameter_quad func_call_comp
+    | COMMA expressions g_parameter_quad func_call_comp
     | empty
     '''
+
+def p_g_parameter_quad(p):
+    'g_parameter_quad :'
+    argument = elementStack.pop()
+    print(argument)
+    argumentType = typeStack.pop()
+    for x in range(dirFunc[funcName]["parameters"]):
+        print(x)
+        if argumentType == dirFunc[funcName]["parameter_table"][x]["type"]:
+            quadruples.append(['param', argument, None, dirFunc[funcName]["parameter_table"][x]["name"]])
+        else:
+            print("Error: Type Mismatch: Argument provided is not same type as parameter")
+
+def p_parameter_check_comma(p):
+    'parameter_check_comma :'
+
 
 # function for expressions
 def p_expressions(p):
@@ -773,12 +848,28 @@ def p_error(p):
 
 yacc.yacc()
 
-file = sys.argv[1]
-f = open(file, 'r')
-data = f.read()
-f.close()
-yacc.parse(data)
+def build(file):
+    global yacc 
+    
+    f = open(file, 'r')
+    data = f.read()
+    f.close()
+    yacc.parse(data)
+
+    file = open("data.txt",'w')
+
+    data = {
+        'quadruples' : quadruples,
+        'ct_table' : ct_table,
+        'dirFunc' : dirFunc
+    }
+    
+    file.write(str(data))
+    file.close()
 # if result == "valid":
 # 	print("Valid input")
 # else:
 #     print("Inalid input")
+
+# to continue testing only parser
+build(sys.argv[1])
