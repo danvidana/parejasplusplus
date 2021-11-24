@@ -64,8 +64,7 @@ def p_add_program(p):
         'next_temp_int': 15000,
         'next_temp_float': 20000,
         'next_temp_char': 25000,
-        'next_temp_bool': 30000,
-        'next_temp_string': 35000
+        'next_temp_bool': 30000
     }
     #print(dirFunc)
 
@@ -92,6 +91,13 @@ def p_add_module(p):
     '''add_module :'''
     global funcName
     idName = p[-1]
+    # si funcion no es void y no existe como variable guardarla en vars globales para tener direccion a su resultado
+    if currentType != 'void' and dirFunc[funcName]:
+        funcAddress = set_address('global', currentType)
+        dirFunc['global']['var_table'][idName] = {'type': currentType, 'address': funcAddress}
+
+    
+
     funcName = idName
     if funcName not in dirFunc.keys():
         dirFunc[funcName] = {'type': currentType, 'var_table': {}}
@@ -181,7 +187,10 @@ def p_ids_dec(p):
     '''
     idName = p[1]
     if idName not in dirFunc[funcName]["var_table"]:
-        dirFunc[funcName]["var_table"][idName] = {'type': currentType}
+        dirFunc[funcName]["var_table"][idName] = {
+                'type': currentType,
+                'address': set_address(funcName, currentType)
+            }
     else:
         print('Error: Variable ' + idName + ' already defined')
 
@@ -289,7 +298,7 @@ def p_condition(p):
     '''condition : IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block end_if
     | IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block ELSE g_else_quad block end_if
     | WHILE while_jump OPEN_PAREN expressions CLOSE_PAREN g_while_quad DO block end_while
-    | FOR ids validate_for ASSIGN expressions for_counter_control TO expressions DO block
+    | FOR ids validate_for ASSIGN expressions for_counter_control TO expressions for_counter_end DO block
     '''
 
 # Function to generate quadruple for IF condition (gotoF)
@@ -355,7 +364,24 @@ def p_for_counter_control(p):
     '''for_counter_control :'''
     expressionType = typeStack.pop()
     if expressionType == 'int' or expressionType == 'float':
-        
+        exp = elementStack.pop()
+        vControl = elementStack.peek()
+        controlType = typeStack.peek()
+        tipoRes = semantic_cube[controlType]['='][expressionType]
+        if tipoRes != None:
+            quadruples.append(['=', exp, None, vControl])
+        else:
+            print("Error: Type Mismatch: FOR statement variables must match")
+    else:
+        print("Error: Type Mismatch: FOR expression must calculate INT or FLOAT")
+
+def p_for_counter_end(p):
+    '''for_counter_end :'''
+    expressionType = typeStack.pop()
+    if expressionType == 'int' or expressionType == 'float':
+        exp = elementStack.pop()
+        quadruples.append(['=',exp,None,exp])
+        quadruples.append(['<',])
 
 # function for return
 def p_return(p):
