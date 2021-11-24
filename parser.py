@@ -250,7 +250,7 @@ def p_end_if(p):
 def p_condition(p):
     '''condition : IF OPEN_PAREN expressions CLOSE_PAREN THEN block ELSE g_else_quad block end_if
     | IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block end_if
-    | WHILE OPEN_PAREN expressions CLOSE_PAREN DO block
+    | WHILE while_jump OPEN_PAREN expressions CLOSE_PAREN DO block
     | FOR ids ASSIGN expressions TO expressions DO block
     '''
 
@@ -279,6 +279,12 @@ def p_g_else_quad(p):
 # Function to fill goto, gotoF 
 def fill(end, cont):
     quadruples[end][3] = cont
+
+# Function to save WHILE quadruple position
+def p_while_jump(p):
+    '''while_jump :'''
+    jumpStack.push(len(quadruples))
+    
 
 # function for return
 def p_return(p):
@@ -330,9 +336,14 @@ def p_expressions_op(p):
 
 # function for exp
 def p_exp(p):
-    '''exp : term 
-    | term exp_comp
+    '''exp : term g_quad_exp_as
+    | term g_quad_exp_as exp_comp
     '''
+
+# Function for generating add and subtract quad
+def p_g_quad_exp_as(p):
+    'g_quad_exp_as : '
+    generate_quadruple(['+','-'])
 
 # function for exp_complementary (Sums and subtractions)
 def p_exp_comp(p):
@@ -342,9 +353,14 @@ def p_exp_comp(p):
 
 # function for term
 def p_term(p):
-    '''term : factor 
-    | factor term_comp
+    '''term : factor g_quad_exp_md
+    | factor g_quad_exp_md term_comp
     '''
+
+# Function for generating multiply and divide quad
+def p_g_quad_exp_md(p):
+    'g_quad_exp_md : '
+    generate_quadruple(['*','/'])
 
 # function for term_complimentary (Multiplications and divisions)
 def p_term_comp(p):
@@ -358,8 +374,11 @@ def p_add_op(p):
 
 # function to create quadruples for expressions
 def generate_quadruple(operators):
-    if operatorStack:
-        if operatorStack.peek() in operators:
+    if operatorStack.size() > 0:
+        temp = operatorStack.pop()
+        operatorStack.push(temp)
+
+        if temp in operators:
             # When operator in stack matches operators in precedence order pop from each stack the results
             rightOperand = elementStack.pop()
             rightType = typeStack.pop()
@@ -371,6 +390,7 @@ def generate_quadruple(operators):
             if resultType != None:
                 result = set_address(funcName, 'temp_' + resultType)
                 quadruples.append([operator, leftOperand, rightOperand, result])
+                print([operator, leftOperand, rightOperand, result])
                 elementStack.push(result)
                 typeStack.push(resultType)
             else:
@@ -442,13 +462,23 @@ def set_address(funcName, typeValue):
 
 # function for factor 
 def p_factor(p):
-    '''factor : OPEN_PAREN expressions CLOSE_PAREN
+    '''factor : OPEN_PAREN add_fake expressions CLOSE_PAREN rem_fake
     | variable 
     | func_call
     | CT_INT add_ct_int
     | CT_FLOAT add_ct_float
     | CT_CHAR add_ct_char
     '''
+
+def p_add_fake(p):
+    'add_fake : '
+    operatorStack.push(p[-1])
+    print(p[-1])
+
+def p_rem_fake(p):
+    'rem_fake : '
+    print(operatorStack.peek())
+    operatorStack.pop()
 
 # 3 Functions to push constants to stacks
 def p_add_ct_int(p):
@@ -457,7 +487,7 @@ def p_add_ct_int(p):
     
     elementStack.push(p[-1])
     typeStack.push('int')
-    print(p[1])
+    
 
 def p_add_ct_float(p):
     'add_ct_float : '
