@@ -64,7 +64,8 @@ def p_add_program(p):
         'next_temp_int': 15000,
         'next_temp_float': 20000,
         'next_temp_char': 25000,
-        'next_temp_bool': 30000
+        'next_temp_bool': 30000,
+        'next_temp_string': 35000
     }
     #print(dirFunc)
 
@@ -254,16 +255,28 @@ def p_g_quad_read(p):
 
 # function for write
 def p_write(p):
-    '''write : WRITE OPEN_PAREN CT_STRING write_comp CLOSE_PAREN
-    | WRITE OPEN_PAREN expressions write_comp CLOSE_PAREN
+    '''write : WRITE OPEN_PAREN CT_STRING g_quad_write_str write_comp CLOSE_PAREN
+    | WRITE OPEN_PAREN expressions g_quad_write write_comp CLOSE_PAREN
     '''
 
 # function for write_complementary
 def p_write_comp(p):
-    '''write_comp : COMMA CT_STRING write_comp
-    | COMMA expressions write_comp
+    '''write_comp : COMMA CT_STRING g_quad_write_str write_comp
+    | COMMA expressions g_quad_write write_comp
     | empty
     '''
+
+# funtcion for generating write quad on ct strings
+def p_g_quad_write_str(p):
+    'g_quad_write_str : '
+    # generate quadruple on past read str
+    quadruples.append(['write', None, None, p[-1]])
+
+# funtcion for generating write quad on variables
+def p_g_quad_write(p):
+    'g_quad_write : '
+    # generate quadreuple on currentId
+    quadruples.append(['write', None, None, currentId])
 
 # Function to fill final goto of IF
 def p_end_if(p):
@@ -276,7 +289,7 @@ def p_condition(p):
     '''condition : IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block end_if
     | IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block ELSE g_else_quad block end_if
     | WHILE while_jump OPEN_PAREN expressions CLOSE_PAREN g_while_quad DO block end_while
-    | FOR ids validate_for ASSIGN expressions TO expressions DO block
+    | FOR ids validate_for ASSIGN expressions for_counter_control TO expressions DO block
     '''
 
 # Function to generate quadruple for IF condition (gotoF)
@@ -327,11 +340,22 @@ def p_end_while(p):
     quadruples.append(['goto',None,None,result])
     fill(end, len(quadruples))
 
+# Function that validates if for definition is valid
 def p_validate_for(p):
     '''validate_for :'''
     global currentId
     elementStack.push(currentId)
-    typeStack.push(diFunc[funcName]["var_table"][currentId]["type"])
+    idType = diFunc[funcName]["var_table"][currentId]["type"]
+    if idType == 'int' or id == 'float':
+        typeStack.push(diFunc[funcName]["var_table"][currentId]["type"])
+    else:
+        print("Error: Type Mismatch: FOR ID must be type INT or type FLOAT")
+
+def p_for_counter_control(p):
+    '''for_counter_control :'''
+    expressionType = typeStack.pop()
+    if expressionType == 'int' or expressionType == 'float':
+        
 
 # function for return
 def p_return(p):
@@ -568,6 +592,7 @@ def p_variable(p):
 # function to add id to quads
 def p_add_id(p):
     'add_id : '
+    global currentId
     currentId = p[-1]
 
     # Check if variable exists, if exists it adds to stack
