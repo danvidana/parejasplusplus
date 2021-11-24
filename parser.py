@@ -36,6 +36,7 @@ currentFunc = ''
 currentIdVar = ''
 paramsCounter = 0
 varsCounter = 0
+funcCallCounter = 0
 
 ### Stacks for quadruples
 # For expresions
@@ -494,12 +495,20 @@ def p_end_for(p):
 
 # function for return
 def p_return(p):
-    'return : RETURN OPEN_PAREN exp CLOSE_PAREN'
+    'return : RETURN OPEN_PAREN expressions CLOSE_PAREN return_end'
+
+def p_return_end(p):
+    'return_end :'
+    quadruples.append(['return', funcName, None, funcName])
 
 # funciton for func_call
 def p_func_call(p):
-    '''func_call : ID verify_function_exists OPEN_PAREN era_activation func_call_comp CLOSE_PAREN change_to_global
+    '''func_call : ID verify_function_exists OPEN_PAREN era_activation func_call_comp CLOSE_PAREN g_gosub_quad change_to_global
     '''
+
+def p_g_gosub_quad(p):
+    'g_gosub_quad :'
+    quadruples.append(['gosub',None , None, funcName])
 
 def p_change_to_global(p):
     'change_to_global :'
@@ -531,15 +540,17 @@ def p_func_call_comp(p):
 
 def p_g_parameter_quad(p):
     'g_parameter_quad :'
+    global funcCallCounter
     argument = elementStack.pop()
     print(argument)
     argumentType = typeStack.pop()
-    for x in range(dirFunc[funcName]["parameters"]):
-        print(x)
-        if argumentType == dirFunc[funcName]["parameter_table"][x]["type"]:
-            quadruples.append(['param', argument, None, dirFunc[funcName]["parameter_table"][x]["name"]])
-        else:
-            print("Error: Type Mismatch: Argument provided is not same type as parameter")
+    if argumentType == dirFunc[funcName]["parameter_table"][funcCallCounter]["type"]:
+        quadruples.append(['param', argument, None, dirFunc[funcName]["parameter_table"][funcCallCounter]["name"]])
+    else:
+        print("Error: Type Mismatch: Argument provided is not same type as parameter")
+    if funcCallCounter < dirFunc[funcName]["parameters"] - 1:
+        funcCallCounter += 1
+
 
 def p_parameter_check_comma(p):
     'parameter_check_comma :'
@@ -584,7 +595,7 @@ def p_expressions_op(p):
 
 # function for exp
 def p_exp(p):
-    '''exp : term g_quad_exp_as
+    '''exp : term g_quad_exp_as_alone
     | term g_quad_exp_as exp_comp
     '''
 
@@ -592,6 +603,10 @@ def p_exp(p):
 def p_g_quad_exp_as(p):
     'g_quad_exp_as : '
     generate_quadruple(['+','-'])
+
+def p_g_quad_exp_as_alone(p):
+    'g_quad_exp_as_alone : '
+    generate_quadruple(['+','-'],True)
 
 # function for exp_complementary (Sums and subtractions)
 def p_exp_comp(p):
@@ -601,7 +616,7 @@ def p_exp_comp(p):
 
 # function for term
 def p_term(p):
-    '''term : factor g_quad_exp_md
+    '''term : factor g_quad_exp_md_alone
     | factor g_quad_exp_md term_comp
     '''
 
@@ -609,6 +624,11 @@ def p_term(p):
 def p_g_quad_exp_md(p):
     'g_quad_exp_md : '
     generate_quadruple(['*','/'])
+
+# Function for generating multiply and divide quad if operand is alone
+def p_g_quad_exp_md_alone(p):
+    'g_quad_exp_md_alone : '
+    generate_quadruple(['*','/'],True)
 
 # function for term_complimentary (Multiplications and divisions)
 def p_term_comp(p):
@@ -621,7 +641,7 @@ def p_add_op(p):
     operatorStack.push(p[-1])
 
 # function to create quadruples for expressions
-def generate_quadruple(operators):
+def generate_quadruple(operators, alone = False):
     if operatorStack.size() > 0:
         temp = operatorStack.pop()
         operatorStack.push(temp)
@@ -638,12 +658,18 @@ def generate_quadruple(operators):
             if rightType in ['ct_int', 'ct_float', 'ct_char']:
                 # Add ct to ct_table
                 rightAddress = set_address(rightOperand, rightType, rightOperand)
+            elif alone:
+                # Add expression to temp local table
+                rightAddress = set_address(funcName, rightType)
             else:
                 rightAddress = get_address(funcName, rightOperand)
 
             if leftType in ['ct_int', 'ct_float', 'ct_char']:
                 # Add ct to ct_table
                 leftAddress = set_address(leftOperand, leftType, leftOperand)
+            elif alone:
+                # Add expression to temp local table
+                leftAddress = set_address(funcName, leftType)
             else:
                 leftAddress = get_address(funcName, leftOperand)
                 
@@ -666,49 +692,49 @@ def set_address(funcName, typeValue, value=None):
     # match to types to decide which next address is needed
     match typeValue:
         case 'int':
-            address = dirFunc[funcName]['next_int']
+            address = dirFunc[funcName]['next_int'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 4999 + localOrGlobal:
                 print("Error: Stack overflow")
             dirFunc[funcName]['next_int'] += 1
 
         case 'float':
-            address = dirFunc[funcName]['next_float']
+            address = dirFunc[funcName]['next_float'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 9999 + localOrGlobal:
                 print("Error: Stack overflow")
             dirFunc[funcName]['next_float'] += 1
             
         case 'char':
-            address = dirFunc[funcName]['next_char']
+            address = dirFunc[funcName]['next_char'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 14999 + localOrGlobal:
                 print("Error: Stack overflow")
             dirFunc[funcName]['next_char'] += 1
             
         case 'temp_int':
-            address = dirFunc[funcName]['next_temp_int']
+            address = dirFunc[funcName]['next_temp_int'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 19999 + localOrGlobal:
                 print("Error: Stack overflow")
             dirFunc[funcName]['next_temp_int'] += 1
 
         case 'temp_float':
-            address = dirFunc[funcName]['next_temp_float']
+            address = dirFunc[funcName]['next_temp_float'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 24999 + localOrGlobal:
                 print("Error: Stack overflow")
             dirFunc[funcName]['next_temp_float'] += 1
         
         case 'temp_char':
-            address = dirFunc[funcName]['next_temp_char']
+            address = dirFunc[funcName]['next_temp_char'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 29999 + localOrGlobal:
                 print("Error: Stack overflow")
             dirFunc[funcName]['next_temp_char'] += 1
 
         case 'temp_bool':
-            address = dirFunc[funcName]['next_temp_bool']
+            address = dirFunc[funcName]['next_temp_bool'] + localOrGlobal
             # if address is higher than limit throw error
             if address > 34999 + localOrGlobal:
                 print("Error: Stack overflow")
