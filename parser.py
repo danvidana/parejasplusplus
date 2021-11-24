@@ -39,6 +39,7 @@ currentFunc = ''
 operatorStack = Stack()
 typeStack = Stack()
 elementStack = Stack()
+jumpStack = Stack()
 
 funcName = 'global'
 
@@ -54,7 +55,17 @@ def p_add_program(p):
     'add_program : '
     # Create dirFunc
     global dirFunc
-    dirFunc[funcName] = {'type': 'void', 'var_table': {}}
+    dirFunc[funcName] = {
+        'type': 'void',
+        'var_table': {},
+        'next_int': 1,
+        'next_float': 5000,
+        'next_char': 10000,
+        'next_temp_int': 15000,
+        'next_temp_float': 20000,
+        'next_temp_char': 25000,
+        'next_temp_bool': 30000
+    }
     #print(dirFunc)
 
 def p_end_program(p):
@@ -229,13 +240,45 @@ def p_write_comp(p):
     | empty
     '''
 
+# Function to fill final goto of IF
+def p_end_if(p):
+    '''end_if :'''
+    end = jumpStack.pop()
+    fill(end, len(quadruples))
+
 # function for condition
 def p_condition(p):
-    '''condition : IF OPEN_PAREN expressions CLOSE_PAREN THEN block ELSE block
-    | IF OPEN_PAREN expressions CLOSE_PAREN THEN block
+    '''condition : IF OPEN_PAREN expressions CLOSE_PAREN THEN block ELSE g_else_quad block end_if
+    | IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block end_if
     | WHILE OPEN_PAREN expressions CLOSE_PAREN DO block
     | FOR ids ASSIGN expressions TO expressions DO block
     '''
+
+# Function to generate quadruple for IF condition (gotoF)
+def p_g_if_quad(p):
+    '''g_if_quad :'''
+    print("g_if_quad")
+    print(typeStack.peek())
+    expressionType = typeStack.pop()
+    if expressionType != 'bool':
+        print('Error: Type Mismatch: IF condition must receive a BOOL type')
+    else:
+        result = elementStack.pop()
+        # TODO Generate quad: gotoF, result, None, _____ ?None?
+        jumpStack.push(len(quadruples) - 1)
+
+# Function to generate quadruple for IF-ELSE (goto)
+def p_g_else_quad(p):
+    '''g_else_quad :'''
+    global jumpStack
+    # TODO Generate quad: goto, None, None, _____ ?None?
+    quadToFill = jumpStack.pop()
+    fill(quadToFill, len(quadruples))
+    jumpStack.push(len(quadruples) - 1)
+
+# Function to fill goto, gotoF 
+def fill(end, cont):
+    quadruples[end][3] = cont
 
 # function for return
 def p_return(p):
@@ -312,12 +355,12 @@ def p_term_comp(p):
 def p_add_op(p):
     'add_op : '
     operatorStack.push(p[-1])
-    print(p[-1])
 
 # function to create quadruples for expressions
 def generate_quadruple(operators):
     if operatorStack:
         if operatorStack.peek() in operators:
+            # When operator in stack matches operators in precedence order pop from each stack the results
             rightOperand = elementStack.pop()
             rightType = typeStack.pop()
             leftOperand = elementStack.pop()
@@ -325,7 +368,77 @@ def generate_quadruple(operators):
             operator = operatorStack.pop()
 
             resultType = semantic_cube[letfType][operator][rightType]
+            if resultType != None:
+                result = set_address(funcName, 'temp_' + resultType)
+                quadruples.append([operator, leftOperand, rightOperand, result])
+                elementStack.push(result)
+                typeStack.push(resultType)
+            else:
+                print("Error: Type mismatch")
+                
+# Function to set address for variables, even when temp
+def set_address(funcName, typeValue):
 
+    # address for global and main vars
+    if funcName == 'global' or funcName == 'main':
+        # match to types to decide which next address is needed
+        match typeValue:
+            case 'int':
+                address = dirFunc[funcName]['next_int']
+                # if address is higher than limit throw error
+                if address > 4999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_int'] += 1
+
+            case 'float':
+                address = dirFunc[funcName]['next_float']
+                # if address is higher than limit throw error
+                if address > 9999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_float'] += 1
+                
+            case 'char':
+                address = dirFunc[funcName]['next_char']
+                # if address is higher than limit throw error
+                if address > 14999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_char'] += 1
+                
+            case 'temp_int':
+                address = dirFunc[funcName]['next_temp_int']
+                # if address is higher than limit throw error
+                if address > 19999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_temp_int'] += 1
+
+            case 'temp_float':
+                address = dirFunc[funcName]['next_temp_float']
+                # if address is higher than limit throw error
+                if address > 24999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_temp_float'] += 1
+            
+            case 'temp_char':
+                address = dirFunc[funcName]['next_temp_char']
+                # if address is higher than limit throw error
+                if address > 29999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_temp_char'] += 1
+
+            case 'temp_bool':
+                address = dirFunc[funcName]['next_temp_bool']
+                # if address is higher than limit throw error
+                if address > 34999:
+                    print("Error: Stack overflow")
+                dirFunc[funcName]['next_temp_bool'] += 1
+
+            case default:
+                print('Error: Type value not available, global addresses.')
+
+    return address
+
+                
+        
 
 # function for factor 
 def p_factor(p):
@@ -392,7 +505,7 @@ def p_add_id(p):
         elementStack.push(varName)
         typeStack.push(varType)
     else:
-        print('Error: Variable ' + idName + ' not defined')
+        print('Error: Variable ' + currentId + ' not defined')
 
     print(currentId)
 
