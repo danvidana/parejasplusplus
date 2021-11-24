@@ -69,8 +69,13 @@ def p_add_program(p):
     #print(dirFunc)
 
 def p_end_program(p):
-    '''end_program :'''
+    '''end_program : '''
     print(dirFunc)
+    count = 0
+    
+    for x in quadruples:
+        print(count,x)
+        count += 1
     
 # funciton for main
 def p_main(p):
@@ -143,13 +148,6 @@ def p_var_comp(p):
     '''var_comp : var_type ids_dec var_comp_2 var_comp_final
     | var_type ids_dec var_comp_2 SEMICOLON var_comp_recursive
     '''
-
-def p_create_var_table(p):
-    '''create_var_table : empty'''
-    if(funcName == 'global'):
-        print("hola")
-    # if(dirFunc[funcName]['vars'] == None):
-    #     print("Sin tabla") 
     
 def p_var_comp_2(p):
     '''var_comp_2 : COMMA ids_dec var_comp_3
@@ -192,6 +190,8 @@ def p_ids(p):
     | ID OPEN_BRACKETS exp CLOSE_BRACKETS
     | ID
     '''
+    global currentId
+    currentId = p[1]
 
 # Insers ID variable into symbol table
 # def insert_id(p):
@@ -216,16 +216,41 @@ def p_statements(p):
 # function for assignments
 def p_assignment(p):
     'assignment : ids ASSIGN expressions'
+    global currentId
+    result = elementStack.pop()
+    resultType = typeStack.pop()
+    
+    if currentId in dirFunc[funcName]['var_table']:
+        currentType = dirFunc[funcName]['var_table'][currentId]['type']
+        assignType = semantic_cube[currentType]['='][resultType]
+        if assignType != None:
+            quadruples.append(['=', result, None, currentId])
+            print(['=', result, None, currentId])
+        else:
+            print("Error: Assignment type mismatch")
+    else:
+        print("Error: Id not defined in current scope")
 
 # function for reads
 def p_read(p):
-    'read : READ OPEN_PAREN ids read_comp CLOSE_PAREN'
+    'read : READ OPEN_PAREN ids g_quad_read read_comp CLOSE_PAREN' 
+    
 
 # function for read_complementary
 def p_read_comp(p):
-    '''read_comp : COMMA ids read_comp
-    | empty
+    '''read_comp : COMMA ids g_quad_read read_comp
+    | empty 
     '''
+
+# function for creating read quad
+def p_g_quad_read(p):
+    'g_quad_read : '
+    # Get current type to assign address
+    currentType = dirFunc[funcName]['var_table'][currentId]['type']
+    tempAddress = set_address(funcName, 'temp_' + currentType)
+    # generate quads to read in execution and then assign the temporal to the currentId
+    quadruples.append(['read', None, None, tempAddress])
+    quadruples.append(['=', tempAddress, None, currentId])
 
 # function for write
 def p_write(p):
@@ -242,36 +267,35 @@ def p_write_comp(p):
 
 # Function to fill final goto of IF
 def p_end_if(p):
-    '''end_if :'''
+    '''end_if : '''
     end = jumpStack.pop()
     fill(end, len(quadruples))
 
 # function for condition
 def p_condition(p):
-    '''condition : IF OPEN_PAREN expressions CLOSE_PAREN THEN block ELSE g_else_quad block end_if
-    | IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block end_if
-    | WHILE while_jump OPEN_PAREN expressions CLOSE_PAREN DO block
-    | FOR ids ASSIGN expressions TO expressions DO block
+    '''condition : IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block end_if
+    | IF OPEN_PAREN expressions CLOSE_PAREN g_if_quad THEN block ELSE g_else_quad block end_if
+    | WHILE while_jump OPEN_PAREN expressions CLOSE_PAREN g_while_quad DO block end_while
+    | FOR ids validate_for ASSIGN expressions TO expressions DO block
     '''
 
 # Function to generate quadruple for IF condition (gotoF)
 def p_g_if_quad(p):
     '''g_if_quad :'''
-    print("g_if_quad")
-    print(typeStack.peek())
     expressionType = typeStack.pop()
     if expressionType != 'bool':
         print('Error: Type Mismatch: IF condition must receive a BOOL type')
     else:
         result = elementStack.pop()
-        # TODO Generate quad: gotoF, result, None, _____ ?None?
+        quadruples.append(['gotoF',result,None,None])
+        print(['gotoF',result,None,None])
         jumpStack.push(len(quadruples) - 1)
 
 # Function to generate quadruple for IF-ELSE (goto)
 def p_g_else_quad(p):
     '''g_else_quad :'''
     global jumpStack
-    # TODO Generate quad: goto, None, None, _____ ?None?
+    quadruples.append(['goto',None,None,None])
     quadToFill = jumpStack.pop()
     fill(quadToFill, len(quadruples))
     jumpStack.push(len(quadruples) - 1)
@@ -284,7 +308,30 @@ def fill(end, cont):
 def p_while_jump(p):
     '''while_jump :'''
     jumpStack.push(len(quadruples))
-    
+
+# Function to generate quadruple for WHILE condition (gotoF)
+def p_g_while_quad(p):
+    '''g_while_quad :'''
+    expressionType = typeStack.pop()
+    if expressionType != 'bool':
+        print('Error: Type Mismatch: WHILE condition must receive a BOOL type')
+    else:
+        result = elementStack.pop()
+        quadruples.append(['gotoF',result,None,None])
+        jumpStack.push(len(quadruples) - 1)
+
+def p_end_while(p):
+    '''end_while :'''
+    end = jumpStack.pop()
+    result = jumpStack.pop()
+    quadruples.append(['goto',None,None,result])
+    fill(end, len(quadruples))
+
+def p_validate_for(p):
+    '''validate_for :'''
+    global currentId
+    elementStack.push(currentId)
+    typeStack.push(diFunc[funcName]["var_table"][currentId]["type"])
 
 # function for return
 def p_return(p):
@@ -320,19 +367,24 @@ def p_expression_comp_2(p):
 
 # function for expressions_comp_3
 def p_expression_comp_3(p):
-    '''expression_comp_3 : exp
-    | exp expressions_op exp
+    '''expression_comp_3 : exp expressions_op exp g_quad_logic
+    | exp
     '''
+
+def p_g_quad_logic(p):
+    'g_quad_logic : '
+    generate_quadruple(['<','<=','>','>=','==','!='])
 
 # function for expression operators
 def p_expressions_op(p): 
-    '''expressions_op : LESS_THAN
-    | LESS_THAN_EQUAL
-    | MORE_THAN
-    | MORE_THAN_EQUAL
-    | EQUALS
-    | NOT_EQUALS
+    '''expressions_op : LESS_THAN add_op
+    | LESS_THAN_EQUAL add_op
+    | MORE_THAN add_op
+    | MORE_THAN_EQUAL add_op
+    | EQUALS add_op
+    | NOT_EQUALS add_op
     '''
+    
 
 # function for exp
 def p_exp(p):
@@ -473,11 +525,9 @@ def p_factor(p):
 def p_add_fake(p):
     'add_fake : '
     operatorStack.push(p[-1])
-    print(p[-1])
 
 def p_rem_fake(p):
     'rem_fake : '
-    print(operatorStack.peek())
     operatorStack.pop()
 
 # 3 Functions to push constants to stacks
@@ -495,7 +545,6 @@ def p_add_ct_float(p):
     
     elementStack.push(p[-1])
     typeStack.push('float')
-    print(p[1])
 
 def p_add_ct_char(p):
     'add_ct_char : '
@@ -503,8 +552,6 @@ def p_add_ct_char(p):
     
     elementStack.push(p[-1])
     typeStack.push('char')
-    print(p[1])
-
 
 # function for variable
 def p_variable_params(p):
@@ -536,8 +583,6 @@ def p_add_id(p):
         typeStack.push(varType)
     else:
         print('Error: Variable ' + currentId + ' not defined')
-
-    print(currentId)
 
 # function for variable
 def p_dim(p):
