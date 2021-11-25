@@ -69,7 +69,7 @@ def p_add_program(p):
     dirFunc[funcName] = {
         'type': 'void',
         'var_table': {},
-        'next_int': 1,
+        'next_int': 0,
         'next_float': 5000,
         'next_char': 10000,
         'next_temp_int': 15000,
@@ -81,14 +81,11 @@ def p_add_program(p):
 
 def p_end_program(p):
     '''end_program : '''
-    print(dirFunc)
     count = 0
     
     for x in quadruples:
         print(count,x)
         count += 1
-
-    print(ct_table)
     
 # funciton for main
 def p_main(p):
@@ -153,6 +150,7 @@ def p_add_module(p):
             }
     else:
         print('Error: Module ' + funcName + ' already defined')
+        exit()
 
     # si funcion no es void y no existe como variable guardarla en vars globales para tener direccion a su resultado
     if currentType != 'void' and dirFunc[funcName]:
@@ -261,11 +259,21 @@ def p_ids_dec(p):
     idName = p[1]
     if idName not in dirFunc[funcName]["var_table"]:
         dirFunc[funcName]["var_table"][idName] = {
-                'type': currentType,
-                'address': set_address(funcName, currentType)
-            }
+            'type': currentType,
+            'address': set_address(funcName, currentType)
+        }
     else:
         print('Error: Variable ' + idName + ' already defined')
+        exit()
+
+# def p_is_array(p):
+#     'is_array :'
+#     id = p[-2]
+#     arrayDic = {
+#         id: id,
+#         'linf': 0,
+#         'lsup'
+#     }
 
 # function for ids
 def p_ids(p):
@@ -297,14 +305,26 @@ def p_assignment(p):
     if currentId in dirFunc[funcName]['var_table']:
         currentType = dirFunc[funcName]['var_table'][currentId]['type']
         assignType = semantic_cube[currentType]['='][resultType]
+        # print(currentType)
+        # print('=')
+        # print(resultType)
+        # print('==')
+        # print('assignType',assignType)
+        # print(dirFunc['global'])
         if assignType != None:
+            if resultType in ['ct_int', 'ct_float', 'ct_char']:
+                assignAddress = set_address(funcName, resultType, result)
+            else:
+                assignAddress = get_address(funcName, result)
             resultAddress = get_address(funcName, currentId)
-            assignAddress = get_address(funcName, result)
+            
             quadruples.append(['=', assignAddress, None, resultAddress])
         else:
-            print("Error: Assignment type mismatch")
+            print("Error: Assignment type mismatch", currentId)
+            exit()
     else:
         print("Error: " + currentId + " not defined in current scope")
+        exit()
 
 # function for reads
 def p_read(p):
@@ -322,6 +342,8 @@ def p_g_quad_read(p):
     'g_quad_read : '
     # Get current type to assign address
     currentType = dirFunc[funcName]['var_table'][currentId]['type']
+    # print('readType',currentType)
+    # print('currId',currentId)
     tempAddress = set_address(funcName, 'temp_' + currentType)
 
     resultAddress = get_address(funcName, currentId)
@@ -376,6 +398,7 @@ def p_g_if_quad(p):
     expressionType = typeStack.pop()
     if expressionType != 'bool':
         print('Error: Type Mismatch: IF condition must receive a BOOL type')
+        exit()
     else:
         result = elementStack.pop()
         resultAddress = get_address(funcName, result)
@@ -406,6 +429,7 @@ def p_g_while_quad(p):
     expressionType = typeStack.pop()
     if expressionType != 'bool':
         print('Error: Type Mismatch: WHILE condition must receive a BOOL type')
+        exit()
     else:
         result = elementStack.pop()
         quadruples.append(['gotoF',result,None,None])
@@ -429,8 +453,10 @@ def p_validate_for(p):
             typeStack.push(dirFunc[funcName]["var_table"][currentId]["type"])
         else:
             print("Error: Type Mismatch: FOR ID must be type INT or type FLOAT")
+            exit()
     else:
         print("Error: Id not defined in current scope")
+        exit()
 
 
 def p_for_counter_control(p):
@@ -451,8 +477,10 @@ def p_for_counter_control(p):
             quadruples.append(['=', expAddress, None, vControlAddress])
         else:
             print("Error: Type Mismatch: FOR statement variables must match")
+            exit()
     else:
         print("Error: Type Mismatch: FOR expression must calculate INT or FLOAT")
+        exit()
 
 # Function for generating and managing quadruples that control cycles
 def p_for_counter_end(p):
@@ -476,6 +504,7 @@ def p_for_counter_end(p):
         jumpStack.push(len(quadruples) - 1)
     else:
         print("Error: Type Mismatch: FOR upper limit value must be INT or FLOAT")
+        exit()
 
 # Function to generate FOR quadruples that increment the control
 def p_end_for(p):
@@ -521,9 +550,10 @@ def p_verify_function_exists(p):
     funcName = p[-1]
     nameId = p[-1]
     currentId = nameId
-    print(p[-1])
+    #print(p[-1])
     if nameId not in dirFunc:
         print("Error: Wrong Function Call: " + nameId + " function does not exist")
+        exit()
 
 def p_era_activation(p):
     'era_activation :'
@@ -542,12 +572,13 @@ def p_g_parameter_quad(p):
     'g_parameter_quad :'
     global funcCallCounter
     argument = elementStack.pop()
-    print(argument)
+    #print(argument)
     argumentType = typeStack.pop()
     if argumentType == dirFunc[funcName]["parameter_table"][funcCallCounter]["type"]:
         quadruples.append(['param', argument, None, dirFunc[funcName]["parameter_table"][funcCallCounter]["name"]])
     else:
         print("Error: Type Mismatch: Argument provided is not same type as parameter")
+        exit()
     if funcCallCounter < dirFunc[funcName]["parameters"] - 1:
         funcCallCounter += 1
 
@@ -657,19 +688,25 @@ def generate_quadruple(operators, alone = False):
             resultType = semantic_cube[leftType][operator][rightType]
             if rightType in ['ct_int', 'ct_float', 'ct_char']:
                 # Add ct to ct_table
-                rightAddress = set_address(rightOperand, rightType, rightOperand)
+                rightAddress = set_address(funcName, rightType, rightOperand)
             elif alone:
-                # Add expression to temp local table
-                rightAddress = set_address(funcName, rightType)
+                if rightType in ['ct_int', 'ct_float', 'ct_char']:
+                    # Add ct to ct_table
+                    rightAddress = set_address(funcName, rightType, rightOperand)
+                else:
+                    rightAddress = get_address(funcName, rightOperand)
             else:
                 rightAddress = get_address(funcName, rightOperand)
 
             if leftType in ['ct_int', 'ct_float', 'ct_char']:
                 # Add ct to ct_table
-                leftAddress = set_address(leftOperand, leftType, leftOperand)
+                leftAddress = set_address(funcName, leftType, leftOperand)
             elif alone:
-                # Add expression to temp local table
-                leftAddress = set_address(funcName, leftType)
+                if leftType in ['ct_int', 'ct_float', 'ct_char']:
+                    # Add ct to ct_table
+                    leftAddress = set_address(funcName, leftType, leftOperand)
+                else:
+                    leftAddress = get_address(funcName, leftOperand)
             else:
                 leftAddress = get_address(funcName, leftOperand)
                 
@@ -692,52 +729,59 @@ def set_address(funcName, typeValue, value=None):
     # match to types to decide which next address is needed
     match typeValue:
         case 'int':
-            address = dirFunc[funcName]['next_int'] + localOrGlobal
+            address = dirFunc[funcName]['next_int'] 
             # if address is higher than limit throw error
             if address > 4999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_int'] += 1
 
         case 'float':
-            address = dirFunc[funcName]['next_float'] + localOrGlobal
+            address = dirFunc[funcName]['next_float'] 
             # if address is higher than limit throw error
             if address > 9999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_float'] += 1
             
         case 'char':
-            address = dirFunc[funcName]['next_char'] + localOrGlobal
+            address = dirFunc[funcName]['next_char'] 
             # if address is higher than limit throw error
             if address > 14999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_char'] += 1
             
         case 'temp_int':
-            address = dirFunc[funcName]['next_temp_int'] + localOrGlobal
+            address = dirFunc[funcName]['next_temp_int'] 
             # if address is higher than limit throw error
             if address > 19999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_temp_int'] += 1
 
         case 'temp_float':
-            address = dirFunc[funcName]['next_temp_float'] + localOrGlobal
+            address = dirFunc[funcName]['next_temp_float'] 
             # if address is higher than limit throw error
             if address > 24999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_temp_float'] += 1
         
         case 'temp_char':
-            address = dirFunc[funcName]['next_temp_char'] + localOrGlobal
+            address = dirFunc[funcName]['next_temp_char']
             # if address is higher than limit throw error
             if address > 29999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_temp_char'] += 1
 
         case 'temp_bool':
-            address = dirFunc[funcName]['next_temp_bool'] + localOrGlobal
+            address = dirFunc[funcName]['next_temp_bool'] 
             # if address is higher than limit throw error
             if address > 34999 + localOrGlobal:
                 print("Error: Stack overflow")
+                exit()
             dirFunc[funcName]['next_temp_bool'] += 1
             
         case 'ct_int':
@@ -746,6 +790,7 @@ def set_address(funcName, typeValue, value=None):
             # if address is higher than limit throw error
             if address > 74999:
                 print("Error: Stack overflow")
+                exit()
             ct_table['next_ct_int'] += 1
             
         case 'ct_float':
@@ -754,7 +799,9 @@ def set_address(funcName, typeValue, value=None):
             # if address is higher than limit throw error
             if address > 79999:
                 print("Error: Stack overflow")
+                exit()
             ct_table['next_ct_float'] += 1
+            #print(ct_table)
             
         case 'ct_char':
             address = ct_table['next_ct_char']
@@ -762,6 +809,7 @@ def set_address(funcName, typeValue, value=None):
             # if address is higher than limit throw error
             if address > 84999:
                 print("Error: Stack overflow")
+                exit()
             ct_table['next_ct_char'] += 1
 
         case 'ct_string':
@@ -770,6 +818,7 @@ def set_address(funcName, typeValue, value=None):
             # if address is higher than limit throw error
             if address > 89999:
                 print("Error: Stack overflow")
+                exit()
             ct_table['next_ct_string'] += 1
 
         case default:
@@ -857,6 +906,7 @@ def p_add_id(p):
         typeStack.push(varType)
     else:
         print('Error: Variable ' + currentIdVar + ' not defined')
+        exit()
 
 # function for variable
 def p_dim(p):
@@ -882,20 +932,20 @@ def build(file):
     f.close()
     yacc.parse(data)
 
-    file = open("data.txt",'w')
+    
 
     data = {
         'quadruples' : quadruples,
         'ct_table' : ct_table,
         'dirFunc' : dirFunc
     }
-    
-    file.write(str(data))
-    file.close()
+    with open(file + '.obj','w') as objFile:
+        objFile.write(str(data))
+        objFile.close()
 # if result == "valid":
 # 	print("Valid input")
 # else:
 #     print("Inalid input")
 
 # to continue testing only parser
-build(sys.argv[1])
+#build(sys.argv[1])
