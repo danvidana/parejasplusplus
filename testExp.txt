@@ -1,6 +1,57 @@
 program patito;
 vars
     int a, b, c, d, e, f, h;
+
+int module testFunction(int k)
+vars
+    int t;
+{
+    t = k;
+}
+
+int module testFunction2(int k, int m, int h)
+vars
+    int t;
+{
+    t = k;
+    return(t);
+}
+
+void module testFunction3(int h)
+vars
+    int t;
+{
+    t = h;
+}
+
 main(){
+    
     a = b + c * (d - e / f) * h;
+
+    if(a > b) then {
+        c = 5 + (3 + a);
+    }
+
+    c = a;
+    if(a > c) then {
+        a = 1 + b;
+    } else {
+        a = b;
+    }
+    testFunction2(a+1,b,c);
+
+    while (a < 2) do {
+        a = a + 1;
+    }
+
+    read(a,b);
+    write("hola");
+
+    for a = 1 to a * c - 1 do {
+        for b = 0 to 10 do {
+            write("innermost");
+        }
+        write("outermost");
+    }
+   
 }

@@ -1,0 +1,22 @@
+program factorial;
+vars
+    int n, i;
+    float factorial;
+
+main ()
+{
+    factorial = 1.0;
+    write("Ingresa un numero");
+    read(n);
+
+    if (n < 0) then
+    {
+        write("No se puede hacer factorial de negativo");
+    }else 
+    {
+        for i = 1 to n + 1 do {
+            factorial = factorial * i;
+        }
+        write("Factorial " , " = ", factorial);
+    }
+}

@@ -1,0 +1,12 @@
+program foreveralone;
+vars
+    int i,j,p;
+    float k,h;
+
+main ()
+{
+    read(p);
+    j=p + p + 1;
+    write(j);
+    
+}
