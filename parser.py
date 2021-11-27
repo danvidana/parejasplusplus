@@ -86,6 +86,11 @@ def p_end_program(p):
     for x in quadruples:
         print(count,x)
         count += 1
+
+    print('ct_table:')
+    print(ct_table)
+    print('dirfunc: ')
+    print(dirFunc)
     
 # funciton for main
 def p_main(p):
@@ -322,6 +327,27 @@ def p_assignment(p):
         else:
             print("Error: Assignment type mismatch", currentId)
             exit()
+    # if not in local check for global
+    if currentId in dirFunc['global']['var_table']:
+        currentType = dirFunc['global']['var_table'][currentId]['type']
+        assignType = semantic_cube[currentType]['='][resultType]
+        # print(currentType)
+        # print('=')
+        # print(resultType)
+        # print('==')
+        # print('assignType',assignType)
+        # print(dirFunc['global'])
+        if assignType != None:
+            if resultType in ['ct_int', 'ct_float', 'ct_char']:
+                assignAddress = set_address(funcName, resultType, result)
+            else:
+                assignAddress = get_address(funcName, result)
+            resultAddress = get_address(funcName, currentId)
+            
+            quadruples.append(['=', assignAddress, None, resultAddress])
+        else:
+            print("Error: Assignment type mismatch", currentId)
+            exit()
     else:
         print("Error: " + currentId + " not defined in current scope")
         exit()
@@ -375,7 +401,7 @@ def p_g_quad_write_str(p):
 def p_g_quad_write(p):
     'g_quad_write : '
     # generate quadreuple on currentId
-    resultAddress = get_address(funcName, currentId)
+    resultAddress = get_address(funcName, currentIdVar)
     quadruples.append(['write', None, None, resultAddress])
 
 # Function to fill final goto of IF
@@ -537,7 +563,8 @@ def p_func_call(p):
 
 def p_g_gosub_quad(p):
     'g_gosub_quad :'
-    quadruples.append(['gosub',None , None, funcName])
+    quadPointer = dirFunc[funcName]["quadruple_count"]
+    quadruples.append(['gosub',None , None, quadPointer])
 
 def p_change_to_global(p):
     'change_to_global :'
@@ -948,4 +975,4 @@ def build(file):
 #     print("Inalid input")
 
 # to continue testing only parser
-#build(sys.argv[1])
+build(sys.argv[1])
