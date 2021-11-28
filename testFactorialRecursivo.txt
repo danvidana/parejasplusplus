@@ -1,0 +1,23 @@
+program factorialRecursivo;
+vars
+    int i, j, p, k;
+    float valor;
+    char r;
+    
+int module fact (int j, char w)
+vars int i;
+{
+    if (j > 0) then {
+        return (fact(j - 1, w) * j);
+    }
+    else {
+        return (1);
+    }
+}
+
+main ( )
+{
+    read(p);
+    k = fact(p, 'a');
+    write(k);
+}

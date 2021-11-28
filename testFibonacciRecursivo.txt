@@ -1,0 +1,23 @@
+program testFibonacci;
+vars
+    int i, j, p, k, r;
+
+int module fibbo (int j)
+{
+    if (j <= 0) then {
+        return (0);
+    }
+
+    if (j == 1) then {
+        return (1);
+    }
+    
+    return (fibbo(j - 1) + fibbo(j - 2));
+}
+
+main ()
+{
+    read(r);
+    k = fibbo(r);
+    write(k);
+}

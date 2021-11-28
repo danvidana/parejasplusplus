@@ -37,6 +37,7 @@ currentIdVar = ''
 paramsCounter = 0
 varsCounter = 0
 funcCallCounter = 0
+functionToCall = ''
 
 ### Stacks for quadruples
 # For expresions
@@ -257,10 +258,42 @@ def p_var_module_trans(p):
 
 # function for ids declarations
 def p_ids_dec(p):
-    '''ids_dec : ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS OPEN_BRACKETS CT_INT CLOSE_BRACKETS
-    | ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS
-    | ID
+    '''ids_dec : ids_dec_matrix
+    | ids_dec_array
+    | ids_dec_single
     '''
+
+def p_ids_dec_matrix(p):
+    'ids_dec_matrix : ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS OPEN_BRACKETS CT_INT CLOSE_BRACKETS'
+    idName = p[1]
+    if idName not in dirFunc[funcName]["var_table"]:
+        dirFunc[funcName]["var_table"][idName] = {
+            'type': currentType,
+            'address': set_address(funcName, currentType),
+            'dimensions': 2,
+            'lSuper1': p[3],
+            'lSuper2': p[6]
+        }
+    else:
+        print('Error: Variable ' + idName + ' already defined')
+        exit()
+
+def p_ids_dec_array(p):
+    'ids_dec_array : ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS'
+    idName = p[1]
+    if idName not in dirFunc[funcName]["var_table"]:
+        dirFunc[funcName]["var_table"][idName] = {
+            'type': currentType,
+            'address': set_address(funcName, currentType),
+            'dimensions': 1,
+            'lSuper1': p[3],
+        }
+    else:
+        print('Error: Variable ' + idName + ' already defined')
+        exit()
+
+def p_ids_dec_single(p):
+    'ids_dec_single : ID'
     idName = p[1]
     if idName not in dirFunc[funcName]["var_table"]:
         dirFunc[funcName]["var_table"][idName] = {
@@ -271,23 +304,27 @@ def p_ids_dec(p):
         print('Error: Variable ' + idName + ' already defined')
         exit()
 
-# def p_is_array(p):
-#     'is_array :'
-#     id = p[-2]
-#     arrayDic = {
-#         id: id,
-#         'linf': 0,
-#         'lsup'
-#     }
-
 # function for ids
 def p_ids(p):
-    '''ids : ID OPEN_BRACKETS exp CLOSE_BRACKETS OPEN_BRACKETS exp CLOSE_BRACKETS
-    | ID OPEN_BRACKETS exp CLOSE_BRACKETS
-    | ID
+    '''ids : ids_matrix
+    | ids_array
+    | ids_single
     '''
+
+def p_ids_matrix(p):
+    '''ids_matrix : ID OPEN_BRACKETS exp CLOSE_BRACKETS OPEN_BRACKETS exp CLOSE_BRACKETS'''
     global currentId
     currentId = p[1]
+
+def p_ids_array(p):
+    '''ids_array : ID OPEN_BRACKETS exp CLOSE_BRACKETS'''
+    global currentId
+    currentId = p[1]
+
+def p_ids_single(p):
+    '''ids_single : ID'''
+    global currentId
+    currentId = p[1] 
 
 # function for statements
 def p_statements(p):
@@ -328,7 +365,7 @@ def p_assignment(p):
             print("Error: Assignment type mismatch", currentId)
             exit()
     # if not in local check for global
-    if currentId in dirFunc['global']['var_table']:
+    elif currentId in dirFunc['global']['var_table']:
         currentType = dirFunc['global']['var_table'][currentId]['type']
         assignType = semantic_cube[currentType]['='][resultType]
         # print(currentType)
@@ -401,7 +438,8 @@ def p_g_quad_write_str(p):
 def p_g_quad_write(p):
     'g_quad_write : '
     # generate quadreuple on currentId
-    resultAddress = get_address(funcName, currentIdVar)
+    result = elementStack.pop()
+    resultAddress = get_address(funcName, result)
     quadruples.append(['write', None, None, resultAddress])
 
 # Function to fill final goto of IF
@@ -480,8 +518,15 @@ def p_validate_for(p):
         else:
             print("Error: Type Mismatch: FOR ID must be type INT or type FLOAT")
             exit()
+    elif currentId in dirFunc['global']['var_table']:
+        idType = dirFunc['global']["var_table"][currentId]["type"]
+        if idType == 'int' or id == 'float':
+            typeStack.push(dirFunc['global']["var_table"][currentId]["type"])
+        else:
+            print("Error: Type Mismatch: FOR ID must be type INT or type FLOAT")
+            exit()
     else:
-        print("Error: Id not defined in current scope")
+        print("Error: Id", currentId, "not defined in current scope", funcName)
         exit()
 
 
@@ -550,19 +595,43 @@ def p_end_for(p):
 
 # function for return
 def p_return(p):
-    'return : RETURN OPEN_PAREN expressions CLOSE_PAREN return_end'
+    'return : RETURN OPEN_PAREN expressions CLOSE_PAREN g_quad_return'
 
-def p_return_end(p):
-    'return_end :'
-    quadruples.append(['return', funcName, None, funcName])
+def p_g_quad_return(p):
+    'g_quad_return :'
+    returnResult = elementStack.pop()
+    returnType = typeStack.pop()
+    
+    if returnType in ['ct_int', 'ct_float', 'ct_char', 'ct_string']:
+        returnAddress = set_address(funcName, returnType, returnResult)
+    else:
+        returnAddress = get_address(funcName, returnResult)
+        print(returnAddress)
+    quadruples.append(['return', funcName, None, returnAddress])
 
 # funciton for func_call
 def p_func_call(p):
-    '''func_call : ID verify_function_exists OPEN_PAREN era_activation func_call_comp CLOSE_PAREN g_gosub_quad change_to_global
+    '''func_call : ID verify_function_exists OPEN_PAREN era_activation func_call_comp CLOSE_PAREN g_gosub_quad function_call_end
     '''
 
+def p_function_call_end(p):
+    'function_call_end :'
+    global funcCallCounter
+    returnName = funcName
+    returnType = dirFunc[funcName]['type']
+    elementStack.push(returnName)
+    typeStack.push(returnType)
+
+    if(funcCallCounter != dirFunc[funcName]["parameters"]):
+        print("Error: Parameter amount does not match")
+        exit()
+
+    funcCallCounter = 0
+    
 def p_g_gosub_quad(p):
     'g_gosub_quad :'
+    global functionToCall, funcName
+    funcName = functionToCall
     quadPointer = dirFunc[funcName]["quadruple_count"]
     quadruples.append(['gosub',None , None, quadPointer])
 
@@ -573,19 +642,17 @@ def p_change_to_global(p):
 
 def p_verify_function_exists(p):
     'verify_function_exists :'
-    global currentId, funcName
-    funcName = p[-1]
-    nameId = p[-1]
-    currentId = nameId
+    global functionToCall
+    functionToCall = p[-1]
     #print(p[-1])
-    if nameId not in dirFunc:
-        print("Error: Wrong Function Call: " + nameId + " function does not exist")
+    if functionToCall not in dirFunc:
+        print("Error: Wrong Function Call: " + functionToCall + " function does not exist")
         exit()
 
 def p_era_activation(p):
     'era_activation :'
-    global currentId
-    quadruples.append(['ERA', None, None, currentId])
+    functionName = p[-3]
+    quadruples.append(['ERA', None, None, functionName])
     counter = 0
 
 # function for func_call_complementary
@@ -594,25 +661,39 @@ def p_func_call_comp(p):
     | COMMA expressions g_parameter_quad func_call_comp
     | empty
     '''
-
+    
 def p_g_parameter_quad(p):
     'g_parameter_quad :'
     global funcCallCounter
     argument = elementStack.pop()
     #print(argument)
     argumentType = typeStack.pop()
-    if argumentType == dirFunc[funcName]["parameter_table"][funcCallCounter]["type"]:
-        quadruples.append(['param', argument, None, dirFunc[funcName]["parameter_table"][funcCallCounter]["name"]])
+    match argumentType:
+        case 'ct_int':
+            argumentAddress = set_address(funcName, argumentType, argument)
+            argumentType = 'int'
+            
+        case 'ct_float':
+            argumentAddress = set_address(funcName, argumentType, argument)
+            argumentType = 'float'
+            
+        case 'ct_char':
+            argumentAddress = set_address(funcName, argumentType, argument)
+            argumentType = 'char'
+
+        case _:
+            argumentAddress = get_address(funcName, argument)
+    
+    if argumentType == dirFunc[functionToCall]["parameter_table"][funcCallCounter]["type"]:
+        paramName = dirFunc[functionToCall]["parameter_table"][funcCallCounter]["name"]
+        # paramAddress = get_address(funcName, paramName)
+        
+        quadruples.append(['param', argumentAddress, None, paramName])
     else:
         print("Error: Type Mismatch: Argument provided is not same type as parameter")
         exit()
-    if funcCallCounter < dirFunc[funcName]["parameters"] - 1:
+    if funcCallCounter < dirFunc[functionToCall]["parameters"]:
         funcCallCounter += 1
-
-
-def p_parameter_check_comma(p):
-    'parameter_check_comma :'
-
 
 # function for expressions
 def p_expressions(p):
@@ -747,7 +828,7 @@ def generate_quadruple(operators, alone = False):
                 print("Error: Type mismatch")
                 
 # Function to set address for variables, even when temp
-def set_address(funcName, typeValue, value=None):
+def set_address(funcName, typeValue, value=None, size=None):
     # var to know if its globals or locals
     localOrGlobal = 0
     if funcName != 'global':
@@ -859,6 +940,8 @@ def get_address(funcName, idOrAddress):
     # check if id is in var table else, check if it is temporal
     if idOrAddress in dirFunc[funcName]['var_table']:
         address = dirFunc[funcName]['var_table'][idOrAddress]['address']
+    elif idOrAddress in dirFunc['global']['var_table']:
+        address = dirFunc['global']['var_table'][idOrAddress]['address']
     else:
         address = idOrAddress
 
@@ -975,4 +1058,4 @@ def build(file):
 #     print("Inalid input")
 
 # to continue testing only parser
-build(sys.argv[1])
+#build(sys.argv[1])

@@ -8,17 +8,32 @@ vars
 int module fact ()
 {
     i = 2 + 1;
+    return (i + 1);
 }
 
-int module inicia ()
+int module inicia (int pInicia, float p2Inicia)
+vars 
+    int x;
 {
-    p = 50 + j;
+    x = 5;
+    j = x + pInicia;
+    x = 50 + j;
+
+    return(x);
 }
 
 main ()
 {
+    j = 1;
     read(p);
-    j=p*2;
-    inicia();
-    write(p);
+    k = 4.2;
+    j = inicia(p,4.3);
+    write(j);
+    j = fact();
+    write(j);
 }
+
+
+
+
+

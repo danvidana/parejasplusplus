@@ -1,0 +1,26 @@
+program testFibonacci;
+vars
+    int i, j, p, k, r;
+    float valor;
+
+void module fibbo (int j, char w)
+vars
+    int i, aux, fib;
+{
+    aux = 1;
+    fib = 0;
+    for i = 1 to j + 1 do
+    {
+        w = 'b';
+        write("fibonacci:");
+        write(fib);
+        aux = aux + fib;
+        fib = aux - fib;
+    }
+}
+ 
+main ()
+{
+    read(r);
+    fibbo(r, 'a'); 
+}

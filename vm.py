@@ -49,7 +49,7 @@ memStack = Stack()
 
 globalProgMem = Mem()
 newMem = Mem()
-in_ERA = False
+inERA = False
 
 GLOBAL_OVERFLOW = 35000
 LOCAL_OVERFLOW = 70000
@@ -58,18 +58,18 @@ currentFunc = 'global'
 
 ins_pointer = 0
 
-# counter = {
-#     'int': 0,
-#     'float': 0,
-#     'char': 0
-# }
+counter = {
+    'int': 0,
+    'float': 0,
+    'char': 0
+}
 
-# # Local base addresses
-# base_address = {
-#     'int': 35000,
-#     'float': 40000,
-#     'char': 45000
-# }
+# Local base addresses
+base_address = {
+    'int': 35000,
+    'float': 40000,
+    'char': 45000
+}
 
 def inp_type(input_data):
     try:
@@ -101,6 +101,7 @@ def in_range(address, value_type):
 # Get value from memory
 def get_mem_value(address):
     value = 0
+    # print(address)
     if (address >= GLOBAL_OVERFLOW) and (address < LOCAL_OVERFLOW):
         try:
             value = memStack.peek().get_value(address)
@@ -166,10 +167,11 @@ def get_result(leftOperand, operator, rightOperand):
             return leftOperand or rightOperand
 
 def run_quad():
-    global ins_pointer, newMem
+    global ins_pointer, newMem, currentFunc, counter, inERA
     currentQuad = quadruples[ins_pointer]
     ins = currentQuad[0]
-    memStack.push(newMem)
+    print(currentQuad)
+    # memStack.push(newMem)
 
     # match against instruction of current quad to make operation
     match ins:
@@ -185,21 +187,26 @@ def run_quad():
 
             return ins_pointer
 
-        case 'era':
+        case 'ERA':
             newMem = Mem()
             inERA = True
             currentFunc = currentQuad[3]
             ins_pointer += 1
             return ins_pointer
 
+        # quad = [param, address, None, paramName]
         case 'param':
             value = get_value(currentQuad[1])
+            # print('value: ',value)
             paramType = dirFunc[currentFunc]['var_table'][currentQuad[3]]['type']
             address = base_address[paramType] + counter[paramType]
-            counter[param_type] += 1
+            counter[paramType] += 1
             newMem.set_value(value, address)
+            # print(newMem.get_values())
             ins_pointer += 1
             return ins_pointer
+
+            #param, 5020, None, 2003
 
         # quad = ['gosub',,,funcName]
         case 'gosub':
@@ -211,11 +218,12 @@ def run_quad():
             ins_pointer += 1
             fCallsStack.push(ins_pointer)
             in_ERA = False
+            # print('newMem values:',newMem.get_values())
             memStack.push(newMem)
-            ins_pointer = dirFunc[currentQuad[3]]['quadruple_count']
+            ins_pointer = currentQuad[3]
             return ins_pointer
 
-        # quad = ['endfunc',,,address]
+        # quad = ['endfunc',,,]
         case 'endfunc':
             if not memStack.is_empty():
                 memStack.pop()
@@ -246,6 +254,7 @@ def run_quad():
         # quad = ['return',funcName,,address]
         case 'return':
             value = get_value(currentQuad[3])
+            # print(value)
             currentFunc = currentQuad[1]
             memStack.pop()
             set_value(value, dirFunc['global']['var_table'][currentFunc]['address'])
@@ -275,7 +284,8 @@ def run_quad():
             firstValue = get_value(currentQuad[1])
             secondValue = get_value(currentQuad[2])
             result = get_result(firstValue, ins, secondValue)
-
+            
+            
             set_value(result, currentQuad[3])
             ins_pointer += 1
             return ins_pointer
