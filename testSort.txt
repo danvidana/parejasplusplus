@@ -1,0 +1,35 @@
+program testSort;
+vars
+    int i, j, temp, k, h;
+    int a[10];
+
+main ()
+{ 
+    for i = 0 to 5 do 
+    {
+        write("primer for");
+        write(i);
+        a[i] = 5 - i;
+        k = a[i];
+        write(a[i]);
+    }
+
+    for i = 1 to 5 do
+    {
+        for j = i+1 to 5 do
+        {
+            if (a[j] < a[i]) then
+            {
+                temp = a[i];
+                a[i] = a[j];
+                a[j] = temp;
+            }
+        }
+    }
+
+    for i = 1 to 5 do
+    {
+        h = a[i];
+        write(h);
+    }
+}

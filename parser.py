@@ -76,7 +76,8 @@ def p_add_program(p):
         'next_temp_int': 15000,
         'next_temp_float': 20000,
         'next_temp_char': 25000,
-        'next_temp_bool': 30000
+        'next_temp_bool': 30000,
+        'next_pointer': 90000,
     }
     #print(dirFunc)
 
@@ -88,10 +89,10 @@ def p_end_program(p):
         print(count,x)
         count += 1
 
-    print('ct_table:')
-    print(ct_table)
-    print('dirfunc: ')
-    print(dirFunc)
+    # print('ct_table:')
+    # print(ct_table)
+    # print('dirfunc: ')
+    # print(dirFunc)
     
 # funciton for main
 def p_main(p):
@@ -266,10 +267,13 @@ def p_ids_dec(p):
 def p_ids_dec_matrix(p):
     'ids_dec_matrix : ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS OPEN_BRACKETS CT_INT CLOSE_BRACKETS'
     idName = p[1]
+    size = p[3] * p[6]
+    print("Size of matrix", size)
+    print("Type of matrix", currentType)
     if idName not in dirFunc[funcName]["var_table"]:
         dirFunc[funcName]["var_table"][idName] = {
             'type': currentType,
-            'address': set_address(funcName, currentType),
+            'address': set_address(funcName, currentType, None, size),
             'dimensions': 2,
             'lSuper1': p[3],
             'lSuper2': p[6]
@@ -281,10 +285,11 @@ def p_ids_dec_matrix(p):
 def p_ids_dec_array(p):
     'ids_dec_array : ID OPEN_BRACKETS CT_INT CLOSE_BRACKETS'
     idName = p[1]
+    size = p[3]
     if idName not in dirFunc[funcName]["var_table"]:
         dirFunc[funcName]["var_table"][idName] = {
             'type': currentType,
-            'address': set_address(funcName, currentType),
+            'address': set_address(funcName, currentType, None, size),
             'dimensions': 1,
             'lSuper1': p[3],
         }
@@ -318,13 +323,39 @@ def p_ids_matrix(p):
 
 def p_ids_array(p):
     '''ids_array : ID OPEN_BRACKETS exp CLOSE_BRACKETS'''
-    global currentId
+    global currentId, pointerAddress
     currentId = p[1]
+
+    print("current array", p[1])
+    currentArray = p[1]
+    vectorResult = elementStack.pop()
+    vectorType = typeStack.pop()
+
+    baseAdrress = dirFunc[funcName]["var_table"][currentArray]["address"]
+    if vectorType == 'ct_int':
+        vectorResultAddress = set_address(funcName, vectorType, vectorResult)
+    elif vectorType == 'int':
+        vectorResultAddress = get_address(funcName, vectorResult)
+    else:
+        print("Invalid argument for Array use")
+        exit()
+
+    quadruples.append(['ver', 0, dirFunc[funcName]["var_table"][currentId]["lSuper1"], vectorResultAddress])
+    
+    pointerAddress = dirFunc['global']['next_pointer']
+    dirFunc['global']['next_pointer'] += 1
+
+    elementStack.push(pointerAddress)
+    typeStack.push(vectorType)
+    quadruples.append(['@', vectorResultAddress, baseAdrress, pointerAddress])
+    currentId = pointerAddress
 
 def p_ids_single(p):
     '''ids_single : ID'''
     global currentId
-    currentId = p[1] 
+    currentId = p[1]
+    
+
 
 # function for statements
 def p_statements(p):
@@ -341,6 +372,7 @@ def p_statements(p):
 def p_assignment(p):
     'assignment : ids ASSIGN expressions'
     global currentId
+    print(currentId)
     result = elementStack.pop()
     resultType = typeStack.pop()
     
@@ -385,6 +417,20 @@ def p_assignment(p):
         else:
             print("Error: Assignment type mismatch", currentId)
             exit()
+    elif currentId in range(90000, 95000):
+        if resultType in ['ct_int', 'ct_float', 'ct_char']:
+            assignAddress = set_address(funcName, resultType, result)
+        else:
+            assignAddress = get_address(funcName, result)
+
+        pointerAddress = elementStack.pop()
+        typeStack.pop()
+        
+        resultAddress = pointerAddress
+        print('si entre aqui')
+
+        quadruples.append(['=', assignAddress, None, resultAddress])
+
     else:
         print("Error: " + currentId + " not defined in current scope")
         exit()
@@ -392,6 +438,7 @@ def p_assignment(p):
 # function for reads
 def p_read(p):
     'read : READ OPEN_PAREN ids g_quad_read read_comp CLOSE_PAREN' 
+    # print(elementStack.elements())
     
 
 # function for read_complementary
@@ -419,6 +466,7 @@ def p_write(p):
     '''write : WRITE OPEN_PAREN CT_STRING g_quad_write_str write_comp CLOSE_PAREN
     | WRITE OPEN_PAREN expressions g_quad_write write_comp CLOSE_PAREN
     '''
+    
 
 # function for write_complementary
 def p_write_comp(p):
@@ -441,6 +489,7 @@ def p_g_quad_write(p):
     result = elementStack.pop()
     resultAddress = get_address(funcName, result)
     quadruples.append(['write', None, None, resultAddress])
+    print('stack after write: ', elementStack.elements())
 
 # Function to fill final goto of IF
 def p_end_if(p):
@@ -842,7 +891,10 @@ def set_address(funcName, typeValue, value=None, size=None):
             if address > 4999 + localOrGlobal:
                 print("Error: Stack overflow")
                 exit()
-            dirFunc[funcName]['next_int'] += 1
+            if size != None:
+                dirFunc[funcName]['next_int'] += size
+            else:
+                dirFunc[funcName]['next_int'] += 1
 
         case 'float':
             address = dirFunc[funcName]['next_float'] 
@@ -850,7 +902,11 @@ def set_address(funcName, typeValue, value=None, size=None):
             if address > 9999 + localOrGlobal:
                 print("Error: Stack overflow")
                 exit()
-            dirFunc[funcName]['next_float'] += 1
+            print("Size in set_address", size)
+            if size != None:
+                dirFunc[funcName]['next_float'] += size
+            else:
+                dirFunc[funcName]['next_float'] += 1
             
         case 'char':
             address = dirFunc[funcName]['next_char'] 
@@ -858,7 +914,10 @@ def set_address(funcName, typeValue, value=None, size=None):
             if address > 14999 + localOrGlobal:
                 print("Error: Stack overflow")
                 exit()
-            dirFunc[funcName]['next_char'] += 1
+            if size != None:
+                dirFunc[funcName]['next_char'] += size
+            else:
+                dirFunc[funcName]['next_char'] += 1
             
         case 'temp_int':
             address = dirFunc[funcName]['next_temp_int'] 
@@ -1020,7 +1079,37 @@ def p_add_id(p):
 
 # function for variable
 def p_dim(p):
-    'dim : OPEN_BRACKETS exp CLOSE_BRACKETS'
+    '''dim : dim_array
+    | dim_matrix
+    | empty
+    '''
+
+def p_dim_array(p):
+    'dim_array : OPEN_BRACKETS expressions CLOSE_BRACKETS'
+    print("current array", p[-1])
+    currentArray = p[-1]
+    vectorResult = elementStack.pop()
+    vectorType = typeStack.pop()
+
+    baseAdrress = dirFunc[funcName]["var_table"][currentArray]["address"]
+    if vectorType == 'ct_int':
+        vectorResultAddress = set_address(funcName, vectorType, vectorResult)
+    elif vectorType == 'int':
+        vectorResultAddress = get_address(funcName, vectorResult)
+
+
+    quadruples.append(['ver', 0, dirFunc[funcName]["var_table"][currentArray]["lSuper1"], vectorResultAddress])
+    
+    pointerAddress = dirFunc['global']['next_pointer']
+    dirFunc['global']['next_pointer'] += 1
+
+    elementStack.push(pointerAddress)
+    typeStack.push(vectorType)
+    quadruples.append(['@', vectorResultAddress, baseAdrress, pointerAddress])
+
+
+def p_dim_matrix(p):
+    'dim_matrix : OPEN_BRACKETS expressions CLOSE_BRACKETS OPEN_BRACKETS expressions CLOSE_BRACKETS'
 
 
 # function for empty
@@ -1058,4 +1147,4 @@ def build(file):
 #     print("Inalid input")
 
 # to continue testing only parser
-#build(sys.argv[1])
+# build(sys.argv[1])

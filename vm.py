@@ -125,6 +125,9 @@ def get_value(address):
         return get_mem_value(address)
     elif address in range(70000,90000):
         return ct_table[address]
+    elif address in range(90000,95000):
+        pointingTo = globalProgMem.get_value(address)
+        return pointingTo
     else:
         return get_value(get_mem_value(address))
 
@@ -132,6 +135,8 @@ def get_value(address):
 def set_value(value, address):
     if address >= GLOBAL_OVERFLOW and address < LOCAL_OVERFLOW:
         memStack.peek().set_value(value, address)
+    elif address in range(90000,95000):
+        globalProgMem.set_value(value, address)
     else:
         globalProgMem.set_value(value, address)
 
@@ -158,6 +163,7 @@ def get_result(leftOperand, operator, rightOperand):
         case '>=':
             return leftOperand >= rightOperand
         case '==':
+            # print(leftOperand, rightOperand)
             return leftOperand == rightOperand
         case '!=':
             return leftOperand != rightOperand
@@ -170,7 +176,7 @@ def run_quad():
     global ins_pointer, newMem, currentFunc, counter, inERA
     currentQuad = quadruples[ins_pointer]
     ins = currentQuad[0]
-    print(currentQuad)
+    # print(currentQuad)
     # memStack.push(newMem)
 
     # match against instruction of current quad to make operation
@@ -186,6 +192,22 @@ def run_quad():
                 ins_pointer += 1
 
             return ins_pointer
+
+        # quad = ['@', address(search for value), baseAddress, pointerAddress]
+        case '@':
+            baseAddress = currentQuad[2]
+            pointerAddress = currentQuad[3]
+            arrayJumpAddress = currentQuad[1]
+
+            arrayJumpAmount = get_value(arrayJumpAddress)
+            # print('array jump amount: ', arrayJumpAmount)
+
+            targetAddress = baseAddress + arrayJumpAmount
+            set_value(targetAddress, pointerAddress)
+            # print('memory after assigning pointer: ',globalProgMem.get_values())
+            ins_pointer += 1
+            return ins_pointer
+
 
         case 'ERA':
             newMem = Mem()
@@ -261,10 +283,14 @@ def run_quad():
             ins_pointer = fCallsStack.pop()
             return ins_pointer
 
-        # quad = ['ver', address, address, address]
+        # quad = ['ver', limInf, limSup, address]
+        # ver, 0, 10, 35001
+        # 35001 = 4
+        # a[0] = 50
         case 'ver':
-            value = get_value(currentQuad[1])
-            if value in range(currentQuad[3]):
+
+            value = get_value(currentQuad[3])
+            if value in range(currentQuad[1],currentQuad[2]):
                 ins_pointer += 1
             else:
                 print('Error: Index out of bounds: ', value)
@@ -274,6 +300,10 @@ def run_quad():
             firstValue = get_value(currentQuad[1])
             if currentQuad[3] < 70000:
                 set_value(firstValue, currentQuad[3])
+            elif currentQuad[3] in range(90000,95000):
+                pointToAddress = get_value(currentQuad[3])
+                # print('assign:',firstValue,'to: ', pointToAddress)
+                set_value(firstValue, pointToAddress)
             else:
                 set_value(firstValue, ct_table[currentQuad[3]])
             
@@ -281,11 +311,24 @@ def run_quad():
             return ins_pointer
 
         case _:
-            firstValue = get_value(currentQuad[1])
-            secondValue = get_value(currentQuad[2])
+            if currentQuad[1] in range(90000,95000):
+                addressToPoint = get_value(currentQuad[1])
+                firstValue = get_value(addressToPoint)
+            else:
+                firstValue = get_value(currentQuad[1])
+
+            if currentQuad[2] in range(90000,95000):
+                addressToPoint = get_value(currentQuad[2])
+                secondValue = get_value(addressToPoint)
+            else:
+                secondValue = get_value(currentQuad[2])
+
+            
+            
             result = get_result(firstValue, ins, secondValue)
+            # print(memStack.peek().get_values())
             
-            
+            # print('expression:',firstValue,ins,secondValue,'=',result)
             set_value(result, currentQuad[3])
             ins_pointer += 1
             return ins_pointer

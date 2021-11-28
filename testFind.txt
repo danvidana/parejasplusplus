@@ -1,0 +1,33 @@
+program testFind;
+vars
+    int x, result, y;
+
+int module find (int x)
+vars
+    int a[20], i;
+{
+    for i = 0 to y do
+    {
+        a[i] = i;
+    }
+
+    for i = 0 to y do
+    {
+        if (x == a[i]) then
+        {
+            return (1);
+        }
+    }
+
+    return (0);
+}
+
+main ()
+{
+    write("Type array limit:");
+    read(y);
+    read(x);
+    result = find(x);
+    write("the result is: ");
+    write(result);
+}
